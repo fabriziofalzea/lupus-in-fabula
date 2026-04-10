@@ -253,9 +253,11 @@ window.EL_VOICES = [
   { id: 'custom', name: 'Voice ID personalizzato…' },
 ];
 
+const EL_DEFAULT_VOICE = 'onwK4e9ZLuTAKqWW03F9'; // Daniel — voce narratore di default
+
 window.getELConfig = () => ({
   key:   localStorage.getItem('lif_el_key')   || '',
-  voice: localStorage.getItem('lif_el_voice') || '',
+  voice: localStorage.getItem('lif_el_voice') || EL_DEFAULT_VOICE,
   customVoice: localStorage.getItem('lif_el_custom_voice') || '',
 });
 
@@ -964,7 +966,7 @@ function HomeScreen({onCreateGame, onViewHistory, onSetup}) {
    ================================================================ */
 function CreateGameScreen({onStart, onBack}) {
   const [step, setStep] = useState(1);
-  const [players, setPlayers] = useState(['','','','']);
+  const [players, setPlayers] = useState([]);
   const [inputName, setInputName] = useState('');
   const [roles, setRoles] = useState([]);
   const inputRef = useRef(null);
@@ -1482,17 +1484,17 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
         fbUpdate({ witchHealUsed: true });
       }
 
-      let narr = 'L\'alba sorge sul villaggio. ';
+      let narr;
       if(dawnVictim && pStates[dawnVictim]) {
-         narr += `Purtroppo, questa notte ci ha lasciato ${pStates[dawnVictim].name}. È stato brutalmente sbranato!`;
+         narr = `${pStates[dawnVictim].name} è stato trovato senza vita. I lupi hanno colpito nella notte.`;
          const w = eliminate(dawnVictim, true);
          if(w) return; // game over
       } else if(figlioTransformed) {
-         narr += 'Il bosco ha parlato stanotte. Qualcosa nell\'ombra si è mosso — ma nessun corpo è stato trovato.';
+         narr = 'Qualcosa si è mosso nel bosco stanotte, ma nessun corpo è stato trovato. Il villaggio si sveglia intatto.';
       } else if(stregaUsedHeal) {
-         narr += 'Qualcuno ha usato una pozione misteriosa stanotte… tutti si risvegliano!';
+         narr = 'Una pozione misteriosa ha salvato qualcuno stanotte. Nessuna vittima — tutti sono vivi.';
       } else {
-         narr += 'Miracolosamente, sembra che la notte sia passata senza fare vittime.';
+         narr = 'Nessuna vittima questa notte. Il villaggio si sveglia al completo.';
       }
 
       // Medium: rivela al GM il ruolo dello spirito interrogato
@@ -1523,9 +1525,9 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
       window.stopSfx('night');
       window.playSfx('dawn');
 
-      // Auto-advance to day
+      // Auto-advance to day (silent — la narrazione è già stata letta all'alba)
       setTimeout(() => {
-         setNarrationAndPhase('day', 'Il sole è sorto, ma qualcuno manca all\'appello. Il villaggio si riunisce in piazza — parlate, discutete, smascherate.', 180);
+         setNarrationAndPhase('day', '', 180);
       }, 7000);
 
     } else {
