@@ -658,8 +658,9 @@ function useAuth() {
   const [user, setUser] = useState(null);
   useEffect(() => {
     if(!auth) return;
-    // Gestisce il ritorno dal redirect Google (necessario su iOS WKWebView)
-    auth.getRedirectResult().catch(() => {});
+    // Gestisce il ritorno dal redirect (solo su app nativa iOS)
+    const isNative = !!(window.Capacitor?.isNativePlatform?.());
+    if (isNative) auth.getRedirectResult().catch(() => {});
     return auth.onAuthStateChanged(u => setUser(u));
   }, []);
   return user;
@@ -671,8 +672,14 @@ function UserProfile() {
   const handleLogin = () => {
     if(!auth) return alert('Firebase non configurato o offline');
     const provider = new firebase.auth.GoogleAuthProvider();
-    // signInWithRedirect invece di signInWithPopup: i popup sono bloccati in WKWebView (iOS)
-    auth.signInWithRedirect(provider).catch(e => alert("Errore di login: " + e.message));
+    const isNative = !!(window.Capacitor?.isNativePlatform?.());
+    if (isNative) {
+      // WKWebView blocca i popup → redirect
+      auth.signInWithRedirect(provider).catch(e => alert("Errore di login: " + e.message));
+    } else {
+      // Browser web → popup classico
+      auth.signInWithPopup(provider).catch(e => alert("Errore di login: " + e.message));
+    }
   };
   const handleLogout = () => auth.signOut();
 
