@@ -621,6 +621,8 @@ function useAuth() {
   const [user, setUser] = useState(null);
   useEffect(() => {
     if(!auth) return;
+    // Gestisce il ritorno dal redirect Google (necessario su iOS WKWebView)
+    auth.getRedirectResult().catch(() => {});
     return auth.onAuthStateChanged(u => setUser(u));
   }, []);
   return user;
@@ -628,11 +630,12 @@ function useAuth() {
 
 function UserProfile() {
   const user = useAuth();
-  
+
   const handleLogin = () => {
     if(!auth) return alert('Firebase non configurato o offline');
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(e => alert("Errore di login: " + e.message));
+    // signInWithRedirect invece di signInWithPopup: i popup sono bloccati in WKWebView (iOS)
+    auth.signInWithRedirect(provider).catch(e => alert("Errore di login: " + e.message));
   };
   const handleLogout = () => auth.signOut();
 
