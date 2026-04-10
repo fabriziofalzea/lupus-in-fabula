@@ -245,6 +245,7 @@ const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // ── ElevenLabs TTS ──────────────────────────────────────────────────────────
 // Voci preimpostate consigliate per il narratore (eleven_multilingual_v2)
+// Per narrativa italiana drammatica, considerare anche: MarcoTrox (W71zT1VwIFFx3mMGH2uZ)
 window.EL_VOICES = [
   { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel — profondo, cinematografico' },
   { id: 'pNInz6obpgDQGcFmaJgB', name: 'Adam — caldo, narrativo' },
@@ -317,7 +318,12 @@ window.speakNarration = (text) => {
         body: JSON.stringify({
           text,
           model_id: 'eleven_multilingual_v2',
-          voice_settings: { stability: 0.55, similarity_boost: 0.80, style: 0.20, use_speaker_boost: true },
+          // Voice settings ottimizzati per narrativa drammatica non robotica (2026-04-10):
+          // - stability: 0.70 → maggiore espressività drammatica vs rigidità robotica
+          // - similarity_boost: 0.85 → chiarezza e fedeltà alla voce (prev: 0.80)
+          // - style: 0.35 → enfasi emotiva dramatica (prev: 0.20 era troppo piatto)
+          // - use_speaker_boost: true → ottimizzazione vocal dynamics
+          voice_settings: { stability: 0.70, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true },
         }),
       })
       .then(r => { if (!r.ok) throw new Error('EL ' + r.status); return r.blob(); })
@@ -535,16 +541,16 @@ const DEFAULT_ROLES = ['lupo','lupo','villico','villico','villico','veggente'];
    NIGHT NARRATION
    ================================================================ */
 const NIGHT_NARRATION = {
-  open:     { open: 'La notte cala sul villaggio. Le candele si spengono una ad una, i passi si fermano. Qualcuno là fuori si muove nell\'oscurità.', close: null },
-  cupido:   { open: 'Cupido apre gli occhi nell\'ombra. La freccia è pronta — scegli i due cuori che batteranno all\'unisono per sempre.', close: 'Il destino è segnato. Cupido chiude gli occhi.' },
-  mitomane: { open: 'Il Mitomane apre gli occhi. Di chi vuoi indossare la maschera? Scegli bene — ti accompagnerà per tutta la partita.', close: 'La maschera è indossata. Gli occhi si richiudono.' },
-  veggente: { open: 'Il Veggente si sveglia. Scegli chi osservare.', close: 'La visione è chiara. Il Veggente torna nel buio.' },
-  guardia:  { open: 'La Guardia del Corpo apre un occhio. Qualcuno verrà attaccato stanotte — chi vuoi proteggere con la tua vita?', close: 'Il protetto è scelto. La Guardia chiude gli occhi.' },
-  figlio_dei_lupi: { open: 'Il Figlio dei Lupi apre gli occhi nell\'oscurità. Il sangue chiama, ma ancora non risponde. Osserva in silenzio.', close: 'Il Figlio dei Lupi si richiude nel buio. Per ora.' },
-  lupi:     { open: 'I lupi aprono gli occhi nell\'oscurità. Si riconoscono, si annusano. Il branco decide — chi cade stanotte?', close: 'La preda è scelta. I lupi tornano nell\'ombra.' },
-  strega:   { open: 'Strega, apri gli occhi. I lupi hanno già deciso chi uccidere. Decidi tu se salvarlo, oppure maledire qualcun altro.', close: 'Le pozioni sono usate. La Strega si nasconde di nuovo nell\'ombra.' },
-  medium:   { open: 'Il Medium apre gli occhi. I morti parlano, se sai ascoltare. Indica uno spirito — scoprirai il suo segreto.', close: 'Il segreto è svelato. Il Medium chiude gli occhi.' },
-  close:    { open: 'Il gallo canta. L\'alba dissolve le ombre della notte. Tutti aprite gli occhi — il villaggio deve fare i conti con quello che è successo.', close: null },
+  open:     { open: 'La notte cala sul villaggio. Il silenzio inghiotte ogni suono, ogni movimento.', close: null },
+  cupido:   { open: 'Cupido apre gli occhi nell\'ombra. La freccia è pronta — scegli i due cuori che batteranno all\'unisono per sempre.', close: 'Il fato è tracciato.' },
+  mitomane: { open: 'Il Mitomane apre gli occhi. Di chi vuoi indossare la maschera? Scegli bene — ti accompagnerà per tutta la partita.', close: 'La maschera è indossata.' },
+  veggente: { open: 'Il Veggente si sveglia. Scegli chi osservare.', close: 'La visione è completa.' },
+  guardia:  { open: 'La Guardia del Corpo apre un occhio. Qualcuno verrà attaccato stanotte — chi vuoi proteggere con la tua vita?', close: 'Il protetto è deciso.' },
+  figlio_dei_lupi: { open: 'Il Figlio dei Lupi apre gli occhi nell\'oscurità. Il sangue chiama, ma ancora non risponde. Osserva in silenzio.', close: 'La bestia resta addormentata. Per ora.' },
+  lupi:     { open: 'I lupi aprono gli occhi nell\'oscurità. Si riconoscono, si annusano. Il branco decide — chi cade stanotte?', close: 'La preda è eletta. I lupi tornano al buio.' },
+  strega:   { open: 'Strega, apri gli occhi. I lupi hanno già deciso chi uccidere. Decidi tu se salvarlo, oppure maledire qualcun altro.', close: 'Le pozioni sono scelte. La Strega siede nell\'ombra.' },
+  medium:   { open: 'Il Medium apre gli occhi. I morti parlano, se sai ascoltare. Indica uno spirito — scoprirai il suo segreto.', close: 'Il messaggio è ricevuto.' },
+  close:    { open: 'L\'alba arriva silenziosamente. Le ombre si ritirano, e il villaggio deve affrontare quello che la notte ha portato.', close: null },
 };
 
 const NIGHT_STEPS = [
@@ -1281,7 +1287,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
     localStorage.setItem('lif_el_custom_voice', elCustomVoice);
     setElTestStatus('🔊 Test in corso…');
     window.afterSpeech(() => setElTestStatus('✅ Test completato!'), 10000);
-    window.speakNarration('Il villaggio è caduto nel silenzio. La notte porta con sé i suoi segreti.');
+    window.speakNarration('La notte. I segreti del villaggio si risvegliano.');
   };
   const [alfaMark, setAlfaMark] = useState(null);        // id del giocatore marcato dal Lupo Alfa
   const [mitomaneTarget, setMitomaneTarget] = useState(null); // id del giocatore imitato dal Mitomane
@@ -1396,7 +1402,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   };
 
   const startGame = ()=>{
-    setNarrationAndPhase('role_reveal','I giocatori stanno scoprendo i loro ruoli segreti…');
+    setNarrationAndPhase('role_reveal','Ogni mascella nasconde la verità. Scopri chi sei davvero.');
   };
 
   const goFirstNight = ()=>{
@@ -1490,11 +1496,11 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
          const w = eliminate(dawnVictim, true);
          if(w) return; // game over
       } else if(figlioTransformed) {
-         narr = 'Qualcosa si è mosso nel bosco stanotte, ma nessun corpo è stato trovato. Il villaggio si sveglia intatto.';
+         narr = 'Nel bosco, una creatura si è svegliata. Il villaggio rimane intatto — per ora.';
       } else if(stregaUsedHeal) {
-         narr = 'Una pozione misteriosa ha salvato qualcuno stanotte. Nessuna vittima — tutti sono vivi.';
+         narr = 'Una pozione misteriosa ha respinto la morte. Stanotte non ci sono vittime.';
       } else {
-         narr = 'Nessuna vittima questa notte. Il villaggio si sveglia al completo.';
+         narr = 'La notte è passata senza sangue. Il villaggio si ritrova intatto al nuovo giorno.';
       }
 
       // Medium: rivela al GM il ruolo dello spirito interrogato
@@ -1572,14 +1578,14 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
       if(target && pStates[target]) {
          const w = eliminate(target);
          if(w) return;
-         setNarrationAndPhase('ended_voting', `Il verdetto è pronunciato. ${pStates[target].name} viene trascinato al rogo tra le urla della folla.`, null, {dayVotes: null});
+         setNarrationAndPhase('ended_voting', `${pStates[target].name} è stato scelto. La folla lo conduce al rogo.`, null, {dayVotes: null});
          setTimeout(() => {
            setNightStep(0); setNightDecisions({});
            setNarrationAndPhase('night', NIGHT_NARRATION.open.open, null, { currentNightStep: null, nightVotes: null });
            window.playSfx('night');
          }, 6000);
       } else {
-         setNarrationAndPhase('ended_voting', `Il villaggio è diviso — nessuna maggioranza. Oggi nessuno muore al rogo. Ma la notte si avvicina…`, null, {dayVotes: null});
+         setNarrationAndPhase('ended_voting', `Nessuno raggiunge la maggioranza. Il villaggio rimane spaccato. La notte sta arrivando…`, null, {dayVotes: null});
          setTimeout(() => {
            setNightStep(0); setNightDecisions({});
            setNarrationAndPhase('night', NIGHT_NARRATION.open.open, null, { currentNightStep: null, nightVotes: null });
@@ -1589,7 +1595,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   };
 
   const goVoting = ()=>{
-    setNarrationAndPhase('voting','Le parole sono finite. Ora parlano i voti. Scegliete chi mandare al rogo — dal vostro telefono, in silenzio.', null);
+    setNarrationAndPhase('voting','La discussione è finita. Il silenzio della votazione può cominciare. Scegliete dal vostro telefono.', null);
   };
 
   const clearVotes = ()=>{
@@ -2095,7 +2101,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
                 onClick={() => {
                   setTimer(0);
                   setTimerOn(false);
-                  setNarrationAndPhase('voting','Le parole sono finite. Ora parlano i voti. Scegliete chi mandare al rogo — dal vostro telefono, in silenzio.', null);
+                  setNarrationAndPhase('voting','La discussione è finita. Il silenzio della votazione può cominciare. Scegliete dal vostro telefono.', null);
                 }}
                 className="mt-6 w-full max-w-[200px] py-4 rounded-2xl bg-blood/10 border border-blood/40 text-blood font-bold hover:bg-blood hover:text-white transition-all shadow-lg active:scale-95 text-sm"
               >

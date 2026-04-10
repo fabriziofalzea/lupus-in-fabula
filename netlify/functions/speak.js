@@ -40,10 +40,15 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         text,
         model_id: 'eleven_multilingual_v2',
+        // Voice settings ottimizzati per narrativa drammatica (2026-04-10):
+        // stability 0.70: Equilibrio tra coerenza e dinamica emotiva (prev: 0.55 = robotico)
+        // similarity_boost 0.85: Massima fedeltà vocale (prev: 0.80)
+        // style 0.35: Enfasi dramatica e intonazione (prev: 0.20 = piatto)
+        // use_speaker_boost: true = ottimizzazione vocal dynamics
         voice_settings: {
-          stability: 0.55,
-          similarity_boost: 0.80,
-          style: 0.20,
+          stability: 0.70,
+          similarity_boost: 0.85,
+          style: 0.35,
           use_speaker_boost: true,
         },
       }),
