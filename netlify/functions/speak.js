@@ -4,29 +4,39 @@
 
 const DEFAULT_VOICE = 'onwK4e9ZLuTAKqWW03F9'; // Daniel
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 exports.handler = async (event) => {
-  // Solo POST
+  // Preflight CORS (richiesto dal browser per chiamate cross-origin da GitHub Pages)
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: CORS_HEADERS, body: '' };
+  }
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return { statusCode: 405, headers: CORS_HEADERS, body: 'Method Not Allowed' };
   }
 
   const apiKey = process.env.ELEVENLABS_API_KEY;
   if (!apiKey) {
-    return { statusCode: 503, body: JSON.stringify({ error: 'ElevenLabs non configurato sul server.' }) };
+    return { statusCode: 503, headers: CORS_HEADERS, body: JSON.stringify({ error: 'ElevenLabs non configurato sul server.' }) };
   }
 
   let body;
   try {
     body = JSON.parse(event.body);
   } catch {
-    return { statusCode: 400, body: 'Invalid JSON' };
+    return { statusCode: 400, headers: CORS_HEADERS, body: 'Invalid JSON' };
   }
 
   const text    = body.text    || '';
   const voiceId = body.voiceId || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE;
 
   if (!text.trim()) {
-    return { statusCode: 400, body: 'Testo vuoto' };
+    return { statusCode: 400, headers: CORS_HEADERS, body: 'Testo vuoto' };
   }
 
   try {
@@ -40,7 +50,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         text,
         model_id: 'eleven_multilingual_v2',
-        speed: 1.4, // 40% più veloce (1.0 = normale, range 0.25–4.0)
+        speed: 1.4,
         voice_settings: {
           stability: 0.70,
           similarity_boost: 0.85,
@@ -53,24 +63,20 @@ exports.handler = async (event) => {
     if (!response.ok) {
       const err = await response.text();
       console.error('ElevenLabs error:', response.status, err);
-      return { statusCode: response.status, body: err };
+      return { statusCode: response.status, headers: CORS_HEADERS, body: err };
     }
 
-    // Converti il body in base64 per passarlo come risposta Netlify
     const arrayBuffer = await response.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Access-Control-Allow-Origin': '*',
-      },
+      headers: { ...CORS_HEADERS, 'Content-Type': 'audio/mpeg' },
       body: base64,
       isBase64Encoded: true,
     };
   } catch (err) {
     console.error('Function error:', err);
-    return { statusCode: 500, body: 'Errore interno' };
+    return { statusCode: 500, headers: CORS_HEADERS, body: 'Errore interno' };
   }
 };
