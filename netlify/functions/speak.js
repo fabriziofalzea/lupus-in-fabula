@@ -40,7 +40,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         text,
         model_id: 'eleven_multilingual_v2',
-        speed: 1.2, // 20% più veloce (1.0 = normale, range 0.25–4.0)
+        speed: 1.4, // 40% più veloce (1.0 = normale, range 0.25–4.0)
         voice_settings: {
           stability: 0.70,
           similarity_boost: 0.85,
