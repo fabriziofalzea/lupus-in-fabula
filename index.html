@@ -318,11 +318,7 @@ window.speakNarration = (text) => {
         body: JSON.stringify({
           text,
           model_id: 'eleven_multilingual_v2',
-          // Voice settings ottimizzati per narrativa drammatica non robotica (2026-04-10):
-          // - stability: 0.70 → maggiore espressività drammatica vs rigidità robotica
-          // - similarity_boost: 0.85 → chiarezza e fedeltà alla voce (prev: 0.80)
-          // - style: 0.35 → enfasi emotiva dramatica (prev: 0.20 era troppo piatto)
-          // - use_speaker_boost: true → ottimizzazione vocal dynamics
+          speed: 1.2, // 20% più veloce (1.0 = normale, range 0.25–4.0)
           voice_settings: { stability: 0.70, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true },
         }),
       })
