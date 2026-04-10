@@ -222,6 +222,23 @@
       0%, 100% { opacity: 0.5; transform: scaleY(0.7); }
       50% { opacity: 1; transform: scaleY(1); }
     }
+    @keyframes roleIconGlow {
+      0%, 100% { filter: drop-shadow(0 0 14px var(--glow-color)); }
+      50% { filter: drop-shadow(0 0 32px var(--glow-color)) drop-shadow(0 0 55px var(--glow-color)); }
+    }
+    @keyframes roleParticleFloat {
+      0%   { transform: translateY(110%) scale(0.6); opacity: 0; }
+      15%  { opacity: 0.5; }
+      85%  { opacity: 0.15; }
+      100% { transform: translateY(-110%) scale(1.4); opacity: 0; }
+    }
+    @keyframes roleBgShimmer {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+    .role-icon-glow { animation: roleIconGlow 2.8s ease-in-out infinite; }
+    .role-particle  { position: absolute; animation: roleParticleFloat 5s ease-in-out infinite; pointer-events: none; }
+    .role-bg-shimmer { animation: roleBgShimmer 4s ease-in-out infinite; }
   </style>
 
   <script>
@@ -534,6 +551,26 @@ const ROLES = {
 const DEFAULT_ROLES = ['lupo','lupo','villico','villico','villico','veggente'];
 
 /* ================================================================
+   ROLE VISUALS
+   ================================================================ */
+// image: null → usa il gradient CSS. Per il 3D: image: 'https://...' e il gradient sparisce.
+const ROLE_VISUALS = {
+  lupo:           { gradient:'linear-gradient(145deg,#1a0005,#3d0010,#1a0000)', glow:'#cc1a1a', particle:'🌑' },
+  lupo_alfa:      { gradient:'linear-gradient(145deg,#1a0000,#4a0010,#2a0800)', glow:'#ff2020', particle:'🩸' },
+  veggente:       { gradient:'linear-gradient(145deg,#0a001a,#1e0050,#0d0030)', glow:'#7c3aed', particle:'✨' },
+  guardia:        { gradient:'linear-gradient(145deg,#001020,#003555,#001830)', glow:'#0ea5e9', particle:'🛡️' },
+  strega:         { gradient:'linear-gradient(145deg,#001a05,#004015,#051800)', glow:'#16a34a', particle:'🌿' },
+  figlio_dei_lupi:{ gradient:'linear-gradient(145deg,#1a0d00,#3d2200,#1a1200)', glow:'#b45309', particle:'🍂' },
+  criceto:        { gradient:'linear-gradient(145deg,#1a0800,#3a1200,#1a0500)', glow:'#f97316', particle:'⚡' },
+  cupido:         { gradient:'linear-gradient(145deg,#1a0012,#450030,#1a001a)', glow:'#ec4899', particle:'💫' },
+  sindaco:        { gradient:'linear-gradient(145deg,#1a1400,#3d2d00,#1a0e00)', glow:'#eab308', particle:'👁️'  },
+  medium:         { gradient:'linear-gradient(145deg,#080812,#14142e,#080818)', glow:'#818cf8', particle:'🌀' },
+  cacciatore:     { gradient:'linear-gradient(145deg,#051800,#103000,#0a1800)', glow:'#65a30d', particle:'🎯' },
+  mitomane:       { gradient:'linear-gradient(145deg,#001a15,#003a30,#001a20)', glow:'#0d9488', particle:'🎭' },
+  villico:        { gradient:'linear-gradient(145deg,#0d0a00,#201800,#0d0900)', glow:'#a16207', particle:'🌾' },
+};
+
+/* ================================================================
    NIGHT NARRATION
    ================================================================ */
 const NIGHT_NARRATION = {
@@ -772,14 +809,22 @@ function QRCodeBox({url, size=120}) {
 /* ================================================================
    ROLE CARD (flip)
    ================================================================ */
-function RoleCard({role, playerName, flipped, onFlip}) {
+function RoleCard({role, playerName, flipped, onFlip, userPhoto}) {
   const r = ROLES[role];
+  const v = ROLE_VISUALS[role] || { gradient:'linear-gradient(145deg,#0d0d0d,#1a1a1a)', glow:'#e2c97e', particle:'⭐' };
   if (!r) return null;
-  const bgClass = r.team==='lupi' ? 'role-wolf' : r.category==='speciale' ? 'role-spec' : 'role-vill';
+
+  const PARTICLES = [
+    { left:'12%', delay:'0s',   dur:'4.5s' },
+    { left:'30%', delay:'1.1s', dur:'5.2s' },
+    { left:'52%', delay:'0.5s', dur:'4.8s' },
+    { left:'70%', delay:'1.8s', dur:'5.5s' },
+    { left:'88%', delay:'0.9s', dur:'4.2s' },
+  ];
 
   return (
     <div className={`flip-container w-full mx-auto ${flipped?'flipped':''}`}
-         style={{height:360, maxWidth:300}}>
+         style={{height:390, maxWidth:300}}>
       <div className="flip-inner w-full h-full">
 
         {/* Back = mystery */}
@@ -793,25 +838,71 @@ function RoleCard({role, playerName, flipped, onFlip}) {
           </div>
         </div>
 
-        {/* Front = role */}
-        <div className={`flip-face flip-back border-2 ${bgClass}`}
-             style={{borderColor: r.color+'aa'}}>
-          <div className="flex flex-col h-full p-5">
-            <div className="text-center mb-3">
-              <p className="text-gray-400 text-xs">Benvenuto/a,</p>
-              <p className="font-cinzel text-moon text-lg font-bold leading-tight">{playerName}</p>
+        {/* Front = role revealed */}
+        <div className="flip-face flip-back overflow-hidden"
+             style={{
+               background: v.image ? `url(${v.image}) center/cover no-repeat` : v.gradient,
+               border: `2px solid ${r.color}99`,
+             }}>
+
+          {/* Overlay per leggibilità */}
+          <div className="absolute inset-0 role-bg-shimmer"
+               style={{background:'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.65) 100%)'}}/>
+
+          {/* Particelle fluttuanti */}
+          <div className="absolute inset-0 overflow-hidden">
+            {PARTICLES.map((p,i) => (
+              <span key={i} className="role-particle text-base"
+                    style={{left:p.left, bottom:'-10%', animationDelay:p.delay, animationDuration:p.dur, opacity:0.35}}>
+                {v.particle}
+              </span>
+            ))}
+          </div>
+
+          {/* Contenuto */}
+          <div className="relative flex flex-col h-full p-5 z-10">
+
+            {/* Header: avatar + nome */}
+            <div className="flex items-center gap-2.5 mb-2">
+              {userPhoto ? (
+                <img src={userPhoto} alt="" referrerPolicy="no-referrer"
+                     className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                     style={{border:`2px solid ${r.color}`, boxShadow:`0 0 10px ${r.color}66`}}/>
+              ) : (
+                <div className="w-10 h-10 rounded-full flex items-center justify-center font-cinzel font-bold text-sm flex-shrink-0"
+                     style={{border:`2px solid ${r.color}`, background:r.color+'22', color:r.color,
+                             boxShadow:`0 0 10px ${r.color}44`}}>
+                  {playerName?.[0]?.toUpperCase()}
+                </div>
+              )}
+              <div>
+                <p className="text-white/50 text-[9px] uppercase tracking-widest">Benvenuto/a</p>
+                <p className="font-cinzel text-white text-sm font-bold leading-tight">{playerName}</p>
+              </div>
             </div>
+
+            {/* Icona ruolo */}
             <div className="flex-1 flex flex-col items-center justify-center gap-2">
-              <div className="text-6xl leading-none" style={{filter:`drop-shadow(0 0 12px ${r.color})`}}>{r.icon}</div>
-              <p className="font-cinzel text-white text-2xl font-bold">{r.name}</p>
-              <span className="badge" style={{background:r.color+'33', border:`1px solid ${r.color}55`, color:r.color}}>
+              <div className="role-icon-glow text-7xl leading-none mb-1"
+                   style={{'--glow-color': v.glow}}>
+                {r.icon}
+              </div>
+              <p className="font-cinzel text-white text-2xl font-bold tracking-wide">{r.name}</p>
+              <span className="text-[11px] px-3 py-1 rounded-full font-bold"
+                    style={{background:r.color+'33', border:`1px solid ${r.color}66`, color:r.color}}>
                 {r.team==='lupi'?'⚔️ Lupi':r.team==='terza'?'🐹 Terza Fazione':'🌾 Villaggio'}
               </span>
-              <p className="text-white text-base font-medium leading-snug text-center mt-2 px-1">{r.description}</p>
             </div>
-            <div className="mt-3 p-2 rounded-lg text-xs text-gray-400 italic"
-                 style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)'}}>
-              💡 {r.tip}
+
+            {/* Descrizione */}
+            <div className="mt-3">
+              <p className="text-white/80 text-sm leading-snug text-center">{r.description}</p>
+              {r.tip && (
+                <div className="mt-2 p-2 rounded-lg text-[11px] text-white/40 italic"
+                     style={{background:'rgba(0,0,0,0.35)', border:'1px solid rgba(255,255,255,0.07)'}}>
+                  💡 {r.tip}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2295,6 +2386,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
    PLAYER SCREEN (each player's device)
    ================================================================ */
 function PlayerScreen({gameId, playerId}) {
+  const user = useAuth();
   const [gameData, setGameData] = useState(null);
   const [flipped, setFlipped] = useState(false);
   const [markedReady, setMarkedReady] = useState(false);
@@ -2435,6 +2527,7 @@ function PlayerScreen({gameId, playerId}) {
           <RoleCard
             role={player.role} playerName={player.name}
             flipped={flipped} onFlip={()=>setFlipped(true)}
+            userPhoto={user?.photoURL}
           />
         </div>
       )}
