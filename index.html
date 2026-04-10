@@ -302,7 +302,7 @@ window.speakNarration = (text) => {
   window.dispatchEvent(new Event('narrator_start'));
 
   // ── 1. Prova il proxy Netlify (produzione — key sul server) ──
-  fetch('/api/speak', {
+  fetch('https://lupusinfab.netlify.app/api/speak', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text, voiceId }),
