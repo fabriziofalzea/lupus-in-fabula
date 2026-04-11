@@ -830,7 +830,7 @@ function RoleCard({role, playerName, flipped, onFlip, userPhoto}) {
 
   return (
     <div className={`flip-container w-full mx-auto ${flipped?'flipped':''}`}
-         style={{height:390, maxWidth:300}}>
+         style={{height:460, maxWidth:300}}>
       <div className="flip-inner w-full h-full">
 
         {/* Back = mystery */}
@@ -901,7 +901,7 @@ function RoleCard({role, playerName, flipped, onFlip, userPhoto}) {
             </div>
 
             {/* Descrizione */}
-            <div className="mt-3">
+            <div className="mt-3 overflow-y-auto flex-shrink min-h-0" style={{maxHeight:160}}>
               <p className="text-white/80 text-sm leading-snug text-center">{r.description}</p>
               {r.tip && (
                 <div className="mt-2 p-2 rounded-lg text-[11px] text-white/40 italic"
