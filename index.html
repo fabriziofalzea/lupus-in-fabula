@@ -553,6 +553,13 @@ const ROLES = {
     description:'Sembri un normale villico, ma nel tuo sangue scorre qualcosa di selvatico. Se i lupi ti attaccano di notte non morirai — ti unirai al branco. La Veggente ti vedrà innocente finché la trasformazione non avviene. Se vieni eliminato al rogo di giorno, muori come chiunque altro.',
     tip:'Solo tu sai chi sei. Comportati da villico — finché il momento non arriva.',
     becomesWolfIfKilled: true
+  },
+  sciamano: {
+    id:'sciamano', name:'Sciamano', team:'villaggio', color:'#06b6d4', icon:'🪬',
+    abbr:'Sc',
+    category:'speciale', wakeOrder:8, nightAction:true,
+    description:'Una volta per partita, durante la notte, puoi richiamare l\'anima di un giocatore eliminato e riportarlo in vita con il suo ruolo originale. Il risorto non sa nulla di ciò che è accaduto durante la sua assenza.',
+    tip:'Aspetta il momento giusto. Resuscitare un Veggente o una Strega a metà partita può ribaltare tutto.',
   }
 };
 
@@ -570,6 +577,7 @@ const ROLE_VISUALS = {
   strega:         { gradient:'linear-gradient(145deg,#001a05,#004015,#051800)', glow:'#16a34a', particle:'🌿' },
   figlio_dei_lupi:{ gradient:'linear-gradient(145deg,#1a0d00,#3d2200,#1a1200)', glow:'#b45309', particle:'🍂' },
   criceto:        { gradient:'linear-gradient(145deg,#1a0800,#3a1200,#1a0500)', glow:'#f97316', particle:'⚡' },
+  sciamano:       { gradient:'linear-gradient(145deg,#001a1a,#003838,#001a2a)', glow:'#06b6d4', particle:'🌀' },
   cupido:         { gradient:'linear-gradient(145deg,#1a0012,#450030,#1a001a)', glow:'#ec4899', particle:'💫' },
   sindaco:        { gradient:'linear-gradient(145deg,#1a1400,#3d2d00,#1a0e00)', glow:'#eab308', particle:'👁️'  },
   medium:         { gradient:'linear-gradient(145deg,#080812,#14142e,#080818)', glow:'#818cf8', particle:'🌀' },
@@ -591,6 +599,7 @@ const NIGHT_NARRATION = {
   lupi:     { open: 'I lupi aprono gli occhi nell\'oscurità. Si riconoscono, si annusano. Il branco decide — chi cade stanotte?', close: 'La preda è eletta. I lupi tornano al buio.' },
   strega:   { open: 'Strega, apri gli occhi. I lupi hanno già deciso chi uccidere. Decidi tu se salvarlo, oppure maledire qualcun altro.', close: 'Le pozioni sono scelte. La Strega siede nell\'ombra.' },
   medium:   { open: 'Il Medium apre gli occhi. I morti parlano, se sai ascoltare. Indica uno spirito — scoprirai il suo segreto.', close: 'Il messaggio è ricevuto.' },
+  sciamano: { open: 'Lo Sciamano apre gli occhi. I confini tra i vivi e i morti si assottigliano. Puoi richiamare un\'anima perduta — scegli chi riportare tra i vivi.', close: 'Il cerchio si chiude. Lo spirito ha risposto.' },
   close:    { open: 'L\'alba arriva silenziosamente. Le ombre si ritirano, e il villaggio deve affrontare quello che la notte ha portato.', close: null },
 };
 
@@ -604,6 +613,7 @@ const NIGHT_STEPS = [
   { key:'lupi',            label:'Lupi',             icon:'🐺', hasRole:true,  roleId:'lupo' },
   { key:'strega',   label:'Strega',       icon:'🧙‍♀️', hasRole:true,  roleId:'strega' },
   { key:'medium',   label:'Medium',       icon:'👁️', hasRole:true,  roleId:'medium' },
+  { key:'sciamano', label:'Sciamano',     icon:'🪬', hasRole:true,  roleId:'sciamano' },
   { key:'close',    label:'Chiusura',     icon:'🌅', hasRole:false },
 ];
 
@@ -1181,6 +1191,47 @@ function CreateGameScreen({onStart, onBack}) {
         {/* STEP 2: Roles */}
         {step===2 && (
           <div className="anim-fade-up">
+            {/* Guida rapida bilanciamento */}
+            {(() => {
+              const n = rolesNeeded;
+              const presets = {
+                4:  { lupi:1, spec:['veggente'],          note:'Partita rapida, ideale per iniziare.' },
+                5:  { lupi:1, spec:['veggente','guardia'], note:'Bilanciata. Buona per prime volte.' },
+                6:  { lupi:2, spec:['veggente','guardia'], note:'Competitiva. Lupi in vantaggio numerico.' },
+                7:  { lupi:2, spec:['veggente','guardia','strega'], note:'Classica Lupus. Raccomandata.' },
+                8:  { lupi:2, spec:['veggente','guardia','strega','cacciatore'], note:'Più ruoli speciali, più imprevedibile.' },
+                9:  { lupi:3, spec:['veggente','guardia','strega','cacciatore'], note:'Lupi forti — il villaggio deve coordinarsi.' },
+                10: { lupi:3, spec:['veggente','guardia','strega','cacciatore','medium'], note:'Partita lunga e ricca di colpi di scena.' },
+              };
+              const preset = presets[n] || (n>10 ? presets[10] : null);
+              if (!preset) return null;
+              const villici = n - preset.lupi - preset.spec.length;
+              return (
+                <div className="rounded-xl p-3 mb-3 anim-fade-in"
+                     style={{background:'rgba(226,201,126,0.06)', border:'1px solid rgba(226,201,126,0.18)'}}>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-moon text-xs font-bold uppercase tracking-widest">✨ Suggerito per {n} giocatori</p>
+                    <button
+                      onClick={()=>{
+                        const r = [...Array(preset.lupi).fill('lupo'), ...preset.spec, ...Array(Math.max(0,villici)).fill('villico')];
+                        setRoles(r.slice(0,n));
+                      }}
+                      className="text-[10px] px-2.5 py-1 rounded-full font-bold active:scale-95 transition-all"
+                      style={{background:'rgba(226,201,126,0.15)', border:'1px solid rgba(226,201,126,0.3)', color:'#e2c97e'}}>
+                      Applica
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {Array(preset.lupi).fill('lupo').concat(preset.spec).concat(Array(Math.max(0,villici)).fill('villico')).map((rid,i)=>{
+                      const r=ROLES[rid]; if(!r) return null;
+                      return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full" style={{background:r.color+'22',color:r.color,border:`1px solid ${r.color}44`}}>{r.icon} {r.name}</span>;
+                    })}
+                  </div>
+                  <p className="text-gray-500 text-[10px] italic">{preset.note}</p>
+                </div>
+              );
+            })()}
+
             <div className="flex items-center justify-between mb-3">
               <p className="text-gray-500 text-sm">Assegna esattamente <span className="text-moon font-bold">{rolesNeeded}</span> ruoli.</p>
               <span className={`font-bold text-sm ${rolesOk?'text-green-400':'text-red-400'}`}>
@@ -1358,6 +1409,8 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   const [elVoiceList, setElVoiceList] = useState([]);
   const [elVoicesLoading, setElVoicesLoading] = useState(false);
   const [ttsMode, setTtsMode] = useState(() => localStorage.getItem('lif_tts_mode') || 'elevenlabs');
+  const [dayTimerMins, setDayTimerMins] = useState(() => parseInt(localStorage.getItem('lif_day_timer') || '5'));
+  const [votePrompt, setVotePrompt] = useState(false); // sollecito votazione
 
   const toggleTtsMode = () => {
     const next = ttsMode === 'elevenlabs' ? 'browser' : 'elevenlabs';
@@ -1400,6 +1453,20 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
     window.afterSpeech(() => setElTestStatus('✅ Test completato!'), 10000);
     window.speakNarration('La notte. I segreti del villaggio si risvegliano.');
   };
+  // Ref per dayTimerMins — evita stale closure nei setTimeout del night engine
+  const dayTimerMinsRef = useRef(dayTimerMins);
+  useEffect(() => { dayTimerMinsRef.current = dayTimerMins; }, [dayTimerMins]);
+
+  // Sollecito votazione quando il timer giorno arriva a zero
+  useEffect(() => {
+    if (phase === 'day' && timer === 0 && !timerOn) {
+      setVotePrompt(true);
+    }
+    if (phase !== 'day') {
+      setVotePrompt(false);
+    }
+  }, [phase, timer, timerOn]);
+
   const [alfaMark, setAlfaMark] = useState(null);        // id del giocatore marcato dal Lupo Alfa
   const [mitomaneTarget, setMitomaneTarget] = useState(null); // id del giocatore imitato dal Mitomane
   const timerRef = useRef(null);
@@ -1621,6 +1688,17 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
         narr += ` [👁️ Medium → ${pStates[mediumDecision].name} era: ${medRole?.icon} ${medRole?.name}]`;
       }
 
+      // Sciamano: resuscita il bersaglio scelto
+      const sciamanoDecision = newDecisions['sciamano'];
+      if(sciamanoDecision && pStates[sciamanoDecision] && !pStates[sciamanoDecision].alive) {
+        const risortoPStates = {...pStates, [sciamanoDecision]: {...pStates[sciamanoDecision], alive: true}};
+        setPStates(risortoPStates);
+        if(db && gameId) db.ref(`games/${gameId}/players/${sciamanoDecision}/alive`).set(true);
+        fbUpdate({ shamanUsed: true });
+        const risortoName = pStates[sciamanoDecision].name;
+        narr += ` [🪬 Sciamano → ${risortoName} è tornato/a tra i vivi!]`;
+      }
+
       // Criceto eliminato dalla Veggente
       const veggenteScanTarget = newDecisions['veggente'];
       if(veggenteScanTarget && pStates[veggenteScanTarget]?.alive && ROLES[pStates[veggenteScanTarget]?.role]?.diesFromVeggente) {
@@ -1644,7 +1722,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
 
       // Auto-advance to day (silent — la narrazione è già stata letta all'alba)
       setTimeout(() => {
-         setNarrationAndPhase('day', '', 180);
+         setNarrationAndPhase('day', '', dayTimerMinsRef.current * 60);
       }, 7000);
 
     } else {
@@ -1773,9 +1851,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
         }
       }
     } else if (phase === 'day') {
-      if (timer === 0 && !timerOn) {
-        plannedAction = 'goVoting'; delay = 2000;
-      }
+      // Nessun auto-avanzamento: il GM decide quando andare al voto (con sollecito votePrompt)
     } else if (phase === 'voting') {
       const aliveCount = Object.values(pStates).filter(p=>p.alive).length;
       const voteCount = Object.keys(dayVotes).length;
@@ -2225,28 +2301,92 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
         {/* ===================== DAY ===================== */}
         {phase==='day' && (
           <div className="anim-fade-up">
-            <div className="glass rounded-2xl p-4 mb-4 flex flex-col items-center justify-center">
-              <p className="text-gray-400 text-sm mb-2 text-center uppercase tracking-widest">Dibattito</p>
-              <Timer
-                seconds={timer} total={timerTotal} running={timerOn}
-                onToggle={()=>setTimerOn(v=>!v)}
-                onReset={()=>{setTimer(timerTotal);setTimerOn(false);}}
-                onEdit={()=>{setTimerInput(String(Math.floor(timer/60)));setShowTimerEdit(true);}}
-              />
-              
-              <button 
-                onClick={() => {
-                  setTimer(0);
-                  setTimerOn(false);
-                  setNarrationAndPhase('voting','La discussione è finita. Il silenzio della votazione può cominciare. Scegliete dal vostro telefono.', null);
-                }}
-                className="mt-6 w-full max-w-[200px] py-4 rounded-2xl bg-blood/10 border border-blood/40 text-blood font-bold hover:bg-blood hover:text-white transition-all shadow-lg active:scale-95 text-sm"
-              >
-                Vai al Voto Subito 🗳️
-              </button>
-              
-              <p className="text-gray-500 text-[10px] mt-4 italic text-center opacity-60">Puoi saltare l'attesa se il villaggio è pronto.</p>
+
+            {/* Sollecito votazione */}
+            {votePrompt && (
+              <div className="glass rounded-2xl p-4 mb-4 text-center anim-fade-up"
+                   style={{border:'2px solid rgba(220,38,38,0.5)', background:'rgba(220,38,38,0.08)'}}>
+                <p className="text-3xl mb-1">🗳️</p>
+                <p className="font-cinzel text-white font-bold text-base mb-1">Tempo scaduto!</p>
+                <p className="text-gray-400 text-sm mb-3">Il villaggio dovrebbe votare.</p>
+                <button
+                  onClick={() => {
+                    setVotePrompt(false);
+                    setTimer(0); setTimerOn(false);
+                    setNarrationAndPhase('voting','La discussione è finita. Il silenzio della votazione può cominciare. Scegliete dal vostro telefono.', null);
+                  }}
+                  className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-95"
+                  style={{background:'rgba(220,38,38,0.2)', border:'1px solid rgba(220,38,38,0.5)', color:'#f87171'}}>
+                  Avvia votazione →
+                </button>
+              </div>
+            )}
+
+            <div className="glass rounded-2xl p-4 mb-4">
+              <p className="text-gray-400 text-xs uppercase tracking-widest mb-3 text-center">Dibattito — tempo rimasto</p>
+
+              {/* Countdown circolare semplificato */}
+              <div className="flex items-center justify-center mb-3">
+                <div className="relative w-24 h-24">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="2.5"/>
+                    <circle cx="18" cy="18" r="15.9" fill="none"
+                      stroke={timer < 30 ? '#f87171' : timer < 60 ? '#fbbf24' : '#e2c97e'}
+                      strokeWidth="2.5" strokeDasharray="100" strokeLinecap="round"
+                      className="timer-path"
+                      strokeDashoffset={timerTotal > 0 ? 100 - (timer / timerTotal * 100) : 100}/>
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`font-cinzel font-bold text-xl leading-none ${timer<30?'text-red-400':timer<60?'text-yellow-400':'text-moon'}`}>
+                      {String(Math.floor(timer/60)).padStart(2,'0')}:{String(timer%60).padStart(2,'0')}
+                    </span>
+                    <span className="text-gray-600 text-[9px] mt-0.5">{timerOn ? 'in corso' : 'in pausa'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Controlli */}
+              <div className="flex gap-2 mb-3">
+                <button onClick={()=>setTimerOn(v=>!v)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all active:scale-95"
+                  style={{background:timerOn?'rgba(248,113,113,0.1)':'rgba(74,222,128,0.1)',
+                          border:`1px solid ${timerOn?'rgba(248,113,113,0.3)':'rgba(74,222,128,0.3)'}`,
+                          color:timerOn?'#f87171':'#4ade80'}}>
+                  {timerOn ? '⏸ Pausa' : '▶ Avvia'}
+                </button>
+                <button onClick={()=>{setTimer(dayTimerMins*60);setTimerTotal(dayTimerMins*60);setTimerOn(false);setVotePrompt(false);}}
+                  className="px-4 py-2.5 rounded-xl text-sm text-gray-400 transition-all active:scale-95"
+                  style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)'}}>
+                  ↺
+                </button>
+              </div>
+
+              {/* Durata rapida */}
+              <div className="flex gap-1.5 mb-1">
+                <p className="text-gray-600 text-[10px] self-center mr-1">Durata:</p>
+                {[3,5,8,10].map(m=>(
+                  <button key={m}
+                    onClick={()=>{ setDayTimerMins(m); localStorage.setItem('lif_day_timer',String(m)); setTimer(m*60); setTimerTotal(m*60); setTimerOn(false); setVotePrompt(false); }}
+                    className="flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all active:scale-95"
+                    style={dayTimerMins===m
+                      ? {background:'rgba(226,201,126,0.2)',border:'1px solid rgba(226,201,126,0.4)',color:'#e2c97e'}
+                      : {background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',color:'#6b7280'}}>
+                    {m}m
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Vai al voto manuale */}
+            <button
+              onClick={() => {
+                setVotePrompt(false); setTimer(0); setTimerOn(false);
+                setNarrationAndPhase('voting','La discussione è finita. Il silenzio della votazione può cominciare. Scegliete dal vostro telefono.', null);
+              }}
+              className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-95 mb-4"
+              style={{background:'rgba(139,26,26,0.1)', border:'1px solid rgba(139,26,26,0.4)', color:'#f87171'}}>
+              Vai al Voto Subito 🗳️
+            </button>
           </div>
         )}
 
@@ -2619,19 +2759,34 @@ function PlayerScreen({gameId, playerId}) {
       {/* During game */}
       {['night','dawn_reveal','day','voting'].includes(phase) && (
         <div className="text-center py-6 anim-fade-up">
+
+          {/* Schermata morto — schermo bloccato, nessuna info sugli altri */}
+          {!player.alive ? (
+            <div className="flex flex-col items-center py-8">
+              <div className="text-7xl mb-4">💀</div>
+              <p className="font-cinzel text-white text-2xl font-bold mb-1">{player.name}</p>
+              <span className="text-xs px-3 py-1 rounded-full mb-4"
+                    style={{background:role?.color+'22', border:`1px solid ${role?.color}44`, color:role?.color}}>
+                {role?.icon} {role?.name}
+              </span>
+              <p className="text-gray-600 text-sm italic">Sei stato eliminato.</p>
+              <p className="text-gray-700 text-xs mt-2">Riponi il telefono e non rivelare il tuo ruolo.</p>
+            </div>
+          ) : (
+          <>
           <div className="text-7xl mb-3 leading-none"
                style={{filter:`drop-shadow(0 0 20px ${role?.color})`}}>
-            {!player.alive ? '💀' : phase==='night' ? '😴' : role?.icon}
+            {phase==='night' ? '😴' : role?.icon}
           </div>
           <p className="font-cinzel text-xl text-white font-bold mb-1">{player.name}</p>
-          <button onClick={()=>player.alive && setShowRoleInfo(true)}
+          <button onClick={()=>setShowRoleInfo(true)}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-1 transition-all active:scale-95"
                   style={{background:role?.color+'33', border:`1px solid ${role?.color}66`}}>
             <span>{role?.icon}</span>
             <span className="font-bold text-white text-sm">{role?.name}</span>
           </button>
-          {player.alive && (
-            <p className="text-gray-600 text-[10px] mb-3">Tocca per rivedere il tuo ruolo</p>
+          <p className="text-gray-600 text-[10px] mb-3">Tocca per rivedere il tuo ruolo</p>
+          </>
           )}
           {/* NIGHT VOTING UI */}
           {player.alive && phase==='night' && gameData.currentNightStep?.roleId === player.role && (
@@ -2736,7 +2891,62 @@ function PlayerScreen({gameId, playerId}) {
                     })}
                   </div>
                 </>
-              ) : player.role === 'cupido' ? (() => {
+              ) : player.role === 'sciamano' ? (() => {
+              /* ── SCIAMANO: resuscita un morto (una volta per partita) ── */
+                const shamanUsed = gameData.shamanUsed || false;
+                const deadPlayers = Object.entries(gameData.players||{}).filter(([id,p])=>!p.alive);
+                const voted = localVote || gameData.nightVotes?.[playerId];
+
+                if (shamanUsed) {
+                  return (
+                    <div className="text-center py-4 mt-2">
+                      <p className="text-3xl mb-2">🪬</p>
+                      <p className="text-gray-400 text-sm">Il tuo potere è già stato usato questa partita.</p>
+                      <p className="text-gray-600 text-xs mt-2">In attesa che il narratore avanzi…</p>
+                    </div>
+                  );
+                }
+
+                if (voted) {
+                  return (
+                    <div className="text-center py-3 mt-2">
+                      <p className="text-cyan-400 font-bold text-sm">🪬 Hai richiamato {gameData.players?.[voted]?.name}</p>
+                      <p className="text-gray-500 text-xs mt-2">In attesa che il narratore avanzi…</p>
+                    </div>
+                  );
+                }
+
+                if (deadPlayers.length === 0) {
+                  return (
+                    <div className="text-center py-4 mt-2">
+                      <p className="text-gray-500 text-sm">Nessun giocatore eliminato ancora.</p>
+                      <p className="text-gray-600 text-xs mt-2">In attesa che il narratore avanzi…</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    <p className="text-gray-400 text-xs mb-3 mt-1">Scegli chi riportare in vita:</p>
+                    <div className="flex flex-col gap-3 relative z-50">
+                      {deadPlayers.map(([id,p])=>{
+                        const isSel = localVote===id || (gameData.nightVotes?.[playerId]===id);
+                        return (
+                          <button key={id}
+                            onClick={(e)=>{e.stopPropagation(); castVote(id);}}
+                            className={`w-full p-5 rounded-2xl flex justify-between items-center transition-all cursor-pointer active:brightness-150 touch-manipulation shadow-lg ${isSel?'bg-white/40 scale-[1.02]':'bg-white/10'}`}
+                            style={{border:isSel?`4px solid #06b6d4`:'2px solid rgba(255,255,255,0.2)',
+                                    boxShadow:isSel?`0 0 35px #06b6d4aa`:'none',
+                                    pointerEvents:'auto', position:'relative', zIndex:999}}>
+                            <span className="font-bold text-white text-2xl pr-4 pointer-events-none">💀 {p.name}</span>
+                            {isSel?<span className="text-4xl pointer-events-none">🪬</span>:<div className="w-10 h-10 rounded-full border-2 border-white/40 pointer-events-none"></div>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })() : player.role === 'cupido' ? (() => {
               /* ── CUPIDO: sceglie due innamorati dal telefono ── */
                 const submitted = (gameData.nightVotes?.[playerId] || '').includes(',') ||
                                   (localVote || '').includes(',');
@@ -2864,31 +3074,6 @@ function PlayerScreen({gameId, playerId}) {
                     </button>
                   );
                 })}
-              </div>
-            </div>
-          )}
-
-          {/* GHOST UI */}
-          {!player.alive && (
-            <div className="mt-4 p-4 rounded-2xl" style={{background:'rgba(139,26,26,0.15)', border:'1px solid rgba(239,68,68,0.2)'}}>
-              <p className="font-cinzel text-red-400 font-bold mb-1">Sei stato/a eliminato/a</p>
-              <p className="text-gray-500 text-sm">Rimani in assoluto silenzio.</p>
-              <div className="mt-4 pt-4 border-t border-red-900/30">
-                <p className="text-gray-400 text-xs uppercase tracking-wider mb-2 text-center text-red-300">Vista Fantasmi</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.values(gameData.players||{}).filter(p=>p.id!==playerId).map(p => {
-                    const pr = ROLES[p.role];
-                    return (
-                      <div key={p.id} className="p-2 rounded-xl text-xs flex flex-col items-center gap-1 text-center" style={{background:pr?.color+'22', border:`1px solid ${pr?.color}44`, opacity:p.alive?1:0.4}}>
-                        <span className="text-xl leading-none">{p.alive?pr?.icon:'💀'}</span>
-                        <div className="min-w-0 w-full">
-                          <p className="font-bold text-white truncate text-[10px]">{p.name}</p>
-                          <p className="truncate text-[9px]" style={{color:pr?.color+'ee'}}>{pr?.name}</p>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
               </div>
             </div>
           )}
