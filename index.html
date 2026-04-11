@@ -313,6 +313,14 @@ window._playAudioBlob = (blob) => {
 window.speakNarration = (text) => {
   if (window._elAudio) { window._elAudio.pause(); window._elAudio = null; }
 
+  // ── Modalità browser: salta ElevenLabs completamente ──
+  if (localStorage.getItem('lif_tts_mode') === 'browser') {
+    window.dispatchEvent(new Event('narrator_start'));
+    window.dispatchEvent(new Event('narrator_end'));
+    window._speakBrowser(text);
+    return;
+  }
+
   const cfg    = window.getELConfig();
   const voiceId = cfg.voice === 'custom' ? cfg.customVoice : cfg.voice;
 
@@ -1349,6 +1357,13 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   const [elTestStatus, setElTestStatus] = useState('');
   const [elVoiceList, setElVoiceList] = useState([]);
   const [elVoicesLoading, setElVoicesLoading] = useState(false);
+  const [ttsMode, setTtsMode] = useState(() => localStorage.getItem('lif_tts_mode') || 'elevenlabs');
+
+  const toggleTtsMode = () => {
+    const next = ttsMode === 'elevenlabs' ? 'browser' : 'elevenlabs';
+    setTtsMode(next);
+    localStorage.setItem('lif_tts_mode', next);
+  };
 
   const loadELVoices = () => {
     if (elVoiceList.length > 0) return; // già caricate
@@ -1943,8 +1958,34 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
               )}
             </div>
 
+            {/* ---- Modalità voce ---- */}
+            <div className="mt-4 w-full">
+              <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-2">Voce narratore</p>
+              <div className="flex rounded-xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+                <button
+                  onClick={()=>{ setTtsMode('elevenlabs'); localStorage.setItem('lif_tts_mode','elevenlabs'); }}
+                  className="flex-1 py-2.5 text-xs font-bold transition-all"
+                  style={ttsMode==='elevenlabs'
+                    ? {background:'rgba(226,201,126,0.18)', color:'#e2c97e', borderRight:'1px solid rgba(255,255,255,0.1)'}
+                    : {background:'transparent', color:'#6b7280', borderRight:'1px solid rgba(255,255,255,0.1)'}}>
+                  🎭 Daniel
+                </button>
+                <button
+                  onClick={()=>{ setTtsMode('browser'); localStorage.setItem('lif_tts_mode','browser'); }}
+                  className="flex-1 py-2.5 text-xs font-bold transition-all"
+                  style={ttsMode==='browser'
+                    ? {background:'rgba(99,179,237,0.15)', color:'#63b3ed'}
+                    : {background:'transparent', color:'#6b7280'}}>
+                  🔈 Browser
+                </button>
+              </div>
+              {ttsMode==='browser' && (
+                <p className="text-gray-600 text-[10px] mt-1.5 text-center">Voce di sistema — ElevenLabs disattivato</p>
+              )}
+            </div>
+
             {/* ---- Test voce narratore ---- */}
-            <div className="mt-4 w-full flex gap-2">
+            <div className="mt-3 w-full flex gap-2">
               <button
                 onClick={testELVoice}
                 className="flex-1 py-3 rounded-xl text-sm font-cinzel font-bold transition-all active:scale-95"
@@ -2399,6 +2440,7 @@ function PlayerScreen({gameId, playerId}) {
   const [localVote, setLocalVote] = useState(null);
   const [debugLog, setDebugLog] = useState('');
   const [error, setError] = useState(null);
+  const [showRoleInfo, setShowRoleInfo] = useState(false);
 
   // Helper per log visibile (debug)
   const contextLog = (msg) => {
@@ -2538,6 +2580,42 @@ function PlayerScreen({gameId, playerId}) {
         </div>
       )}
 
+      {/* Role info modal */}
+      {showRoleInfo && role && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
+             style={{background:'rgba(0,0,0,0.75)', backdropFilter:'blur(4px)'}}
+             onClick={()=>setShowRoleInfo(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 anim-fade-up"
+               style={{background:'#0d1117', border:`1px solid ${role.color}44`}}
+               onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">{role.icon}</span>
+                <p className="font-cinzel text-white font-bold text-lg">{role.name}</p>
+              </div>
+              <button onClick={()=>setShowRoleInfo(false)}
+                      className="text-gray-500 hover:text-white text-xl leading-none px-1">✕</button>
+            </div>
+            <span className="text-[11px] px-3 py-1 rounded-full font-bold"
+                  style={{background:role.color+'33', border:`1px solid ${role.color}66`, color:role.color}}>
+              {role.team==='lupi'?'⚔️ Lupi':role.team==='terza'?'🐹 Terza Fazione':'🌾 Villaggio'}
+            </span>
+            <p className="text-gray-300 text-sm leading-relaxed mt-4">{role.description}</p>
+            {role.tip && (
+              <div className="mt-3 p-2 rounded-lg text-[11px] text-white/50 italic"
+                   style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)'}}>
+                💡 {role.tip}
+              </div>
+            )}
+            <button onClick={()=>setShowRoleInfo(false)}
+                    className="w-full mt-4 py-3 rounded-xl text-sm font-bold text-gray-400"
+                    style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)'}}>
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* During game */}
       {['night','dawn_reveal','day','voting'].includes(phase) && (
         <div className="text-center py-6 anim-fade-up">
@@ -2546,11 +2624,15 @@ function PlayerScreen({gameId, playerId}) {
             {!player.alive ? '💀' : phase==='night' ? '😴' : role?.icon}
           </div>
           <p className="font-cinzel text-xl text-white font-bold mb-1">{player.name}</p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
-               style={{background:role?.color+'33', border:`1px solid ${role?.color}66`}}>
+          <button onClick={()=>player.alive && setShowRoleInfo(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-1 transition-all active:scale-95"
+                  style={{background:role?.color+'33', border:`1px solid ${role?.color}66`}}>
             <span>{role?.icon}</span>
             <span className="font-bold text-white text-sm">{role?.name}</span>
-          </div>
+          </button>
+          {player.alive && (
+            <p className="text-gray-600 text-[10px] mb-3">Tocca per rivedere il tuo ruolo</p>
+          )}
           {/* NIGHT VOTING UI */}
           {player.alive && phase==='night' && gameData.currentNightStep?.roleId === player.role && (
             <div className="mt-6 p-4 rounded-2xl anim-fade-up text-left" style={{background:role?.color+'1a', border:`1px solid ${role?.color}44`}}>
