@@ -674,10 +674,8 @@ function UserProfile() {
     const provider = new firebase.auth.GoogleAuthProvider();
     const isNative = !!(window.Capacitor?.isNativePlatform?.());
     if (isNative) {
-      // WKWebView blocca i popup → redirect
       auth.signInWithRedirect(provider).catch(e => alert("Errore di login: " + e.message));
     } else {
-      // Browser web → popup classico
       auth.signInWithPopup(provider).catch(e => alert("Errore di login: " + e.message));
     }
   };
@@ -699,7 +697,8 @@ function UserProfile() {
 
   return (
     <div className="absolute top-4 right-4 z-50">
-      <button onClick={handleLogin} className="btn-ghost px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(226,201,126,0.1)]">
+      <button onClick={handleLogin}
+        className="btn-ghost px-4 py-2 rounded-full text-xs flex items-center gap-2 shadow-[0_0_10px_rgba(226,201,126,0.1)]">
         <span className="text-sm">👤</span> Accedi
       </button>
     </div>
