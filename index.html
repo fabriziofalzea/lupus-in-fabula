@@ -2407,36 +2407,104 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
 
         {/* ===================== ENDED ===================== */}
         {phase==='ended' && (
-          <div className="anim-fade-up text-center py-6">
-            <div className="text-6xl mb-3" style={{filter:'drop-shadow(0 0 20px gold)'}}>
-              {winner==='lupi'?'🐺':winner==='terza'?'🐹':'🌾'}
+          <div className="anim-fade-up py-6">
+            {/* Titolo vincitore */}
+            <div className="text-center mb-5">
+              <div className="text-6xl mb-3" style={{filter:'drop-shadow(0 0 20px gold)'}}>
+                {winner==='lupi'?'🐺':winner==='terza'?'🐹':'🌾'}
+              </div>
+              <h3 className="font-cinzel text-2xl font-bold text-moon mb-1 win-glow">
+                {winner==='lupi'?'Hanno vinto i Lupi!':winner==='terza'?'Ha vinto il Criceto Mannaro!':'Ha vinto il Villaggio!'}
+              </h3>
+              <p className="text-gray-500 text-sm">Partita #{gameId} · Giorno {dayNum}</p>
             </div>
-            <h3 className="font-cinzel text-2xl font-bold text-moon mb-1 win-glow">
-              {winner==='lupi'?'Hanno vinto i Lupi!':winner==='terza'?'Ha vinto il Criceto Mannaro!':'Ha vinto il Villaggio!'}
-            </h3>
-            <p className="text-gray-500 text-sm mb-6">Partita #{gameId} terminata</p>
 
-            {/* Final scoreboard */}
-            <div className="grid grid-cols-3 gap-2 mb-6">
+            {/* Recap narrativo */}
+            {(()=>{
+              const allPlayers = Object.values(pStates);
+              const wolves     = allPlayers.filter(p=>ROLES[p.role]?.team==='lupi');
+              const villagers  = allPlayers.filter(p=>ROLES[p.role]?.team==='villaggio' && p.role!=='villico');
+              const dead       = allPlayers.filter(p=>!p.alive);
+              const survivors  = allPlayers.filter(p=>p.alive);
+
+              const winReason = winner==='lupi'
+                ? `I lupi (${wolves.map(p=>p.name).join(', ')}) sono riusciti a eguagliare o superare i villici in vita. Il villaggio non ha saputo fermarli in tempo.`
+                : winner==='terza'
+                ? `Il Criceto Mannaro (${allPlayers.find(p=>p.role==='criceto')?.name || '?'}) è sopravvissuto fino alla fine, outlastando tutti. Una vittoria silenziosa.`
+                : wolves.length===0
+                ? `Tutti i lupi sono stati scoperti ed eliminati dal villaggio. ${wolves.map(p=>p.name).join(', ') || 'Il branco'} è caduto.`
+                : 'Il villaggio ha vinto.';
+
+              return (
+                <div className="rounded-2xl p-4 mb-4 text-left"
+                     style={{background:'rgba(226,201,126,0.05)', border:'1px solid rgba(226,201,126,0.15)'}}>
+                  <p className="text-moon text-xs font-bold uppercase tracking-widest mb-2">📖 Come è andata</p>
+                  <p className="text-gray-300 text-sm leading-relaxed mb-3">{winReason}</p>
+
+                  {survivors.length > 0 && (
+                    <div className="mb-2">
+                      <p className="text-green-400 text-[10px] uppercase tracking-widest mb-1.5">✓ Sopravvissuti</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {survivors.map(p=>{
+                          const r=ROLES[p.role];
+                          return <span key={p.id} className="text-xs px-2 py-0.5 rounded-full font-bold"
+                                   style={{background:r?.color+'22',border:`1px solid ${r?.color}44`,color:'#fff'}}>
+                            {r?.icon} {p.name} <span style={{color:r?.color}}>({r?.name})</span>
+                          </span>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {dead.length > 0 && (
+                    <div>
+                      <p className="text-red-400 text-[10px] uppercase tracking-widest mb-1.5 mt-2">💀 Eliminati</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {dead.map(p=>{
+                          const r=ROLES[p.role];
+                          return <span key={p.id} className="text-xs px-2 py-0.5 rounded-full opacity-70"
+                                   style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',color:'#9ca3af'}}>
+                            💀 {p.name} <span style={{color:r?.color+'cc'}}>({r?.name})</span>
+                          </span>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {villagers.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-1.5">⭐ Ruoli speciali presenti</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {villagers.map(p=>{
+                          const r=ROLES[p.role];
+                          return <span key={p.id} className="text-[11px] px-2 py-0.5 rounded-full"
+                                   style={{background:r?.color+'18',border:`1px solid ${r?.color}33`,color:r?.color}}>
+                            {r?.icon} {p.name}
+                          </span>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Scoreboard compatto */}
+            <div className="grid grid-cols-3 gap-2 mb-5">
               {Object.values(pStates).map(p=>{
                 const r=ROLES[p.role];
                 return (
-                  <div key={p.id} className="rounded-xl p-2.5 text-center transition-all"
+                  <div key={p.id} className="rounded-xl p-2.5 text-center"
                        style={{background:r?.color+'1a', border:`1px solid ${r?.color}33`,
-                               opacity:p.alive?1:0.45, filter:p.alive?'':'grayscale(0.6)'}}>
+                               opacity:p.alive?1:0.4, filter:p.alive?'':'grayscale(0.5)'}}>
                     <div className="text-xl mb-0.5">{p.alive?r?.icon:'💀'}</div>
                     <p className="text-white text-xs font-bold truncate">{p.name}</p>
-                    <p className="text-xs font-bold" style={{color:r?.color+'cc'}}>{r?.abbr}</p>
+                    <p className="text-[10px] font-bold" style={{color:r?.color+'cc'}}>{r?.name}</p>
                   </div>
                 );
               })}
             </div>
 
             <button onClick={()=>{
-                onEndGame({
-                  winner, gameId, date:new Date().toISOString(),
-                  players:Object.values(pStates)
-                });
+                onEndGame({ winner, gameId, date:new Date().toISOString(), players:Object.values(pStates) });
               }}
               className="btn-gold w-full py-4 rounded-2xl text-base">
               💾 Salva e Torna alla Home
@@ -2898,11 +2966,20 @@ function PlayerScreen({gameId, playerId}) {
                 const voted = localVote || gameData.nightVotes?.[playerId];
 
                 if (shamanUsed) {
+                  const alreadyPassed = localVote === 'PASS' || gameData.nightVotes?.[playerId] === 'PASS';
                   return (
                     <div className="text-center py-4 mt-2">
                       <p className="text-3xl mb-2">🪬</p>
-                      <p className="text-gray-400 text-sm">Il tuo potere è già stato usato questa partita.</p>
-                      <p className="text-gray-600 text-xs mt-2">In attesa che il narratore avanzi…</p>
+                      <p className="text-gray-400 text-sm mb-4">Il tuo potere è già stato usato questa partita.</p>
+                      {!alreadyPassed ? (
+                        <button onClick={(e)=>{e.stopPropagation(); castVote('PASS');}}
+                          className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-95 touch-manipulation"
+                          style={{background:'rgba(6,182,212,0.1)', border:'1px solid rgba(6,182,212,0.3)', color:'#67e8f9', pointerEvents:'auto', zIndex:999}}>
+                          ➜ Passa il turno
+                        </button>
+                      ) : (
+                        <p className="text-gray-600 text-xs">In attesa che il narratore avanzi…</p>
+                      )}
                     </div>
                   );
                 }
@@ -2919,8 +2996,13 @@ function PlayerScreen({gameId, playerId}) {
                 if (deadPlayers.length === 0) {
                   return (
                     <div className="text-center py-4 mt-2">
-                      <p className="text-gray-500 text-sm">Nessun giocatore eliminato ancora.</p>
-                      <p className="text-gray-600 text-xs mt-2">In attesa che il narratore avanzi…</p>
+                      <p className="text-3xl mb-2">🌿</p>
+                      <p className="text-gray-400 text-sm mb-4">Nessun giocatore eliminato ancora.<br/>Il tuo potere non può essere usato.</p>
+                      <button onClick={(e)=>{e.stopPropagation(); castVote('PASS');}}
+                        className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-95 touch-manipulation"
+                        style={{background:'rgba(6,182,212,0.1)', border:'1px solid rgba(6,182,212,0.3)', color:'#67e8f9', pointerEvents:'auto', zIndex:999}}>
+                        ➜ Passa il turno
+                      </button>
                     </div>
                   );
                 }
@@ -3082,19 +3164,52 @@ function PlayerScreen({gameId, playerId}) {
 
       {/* End game */}
       {phase==='ended' && (
-        <div className="text-center py-6 anim-fade-up">
-          <div className="text-6xl mb-3">{gameData.winner==='lupi'?'🐺':gameData.winner==='terza'?'🐹':'🌾'}</div>
-          <p className="font-cinzel text-moon text-2xl font-bold mb-1">
-            {gameData.winner==='lupi'?'Hanno vinto i Lupi!':gameData.winner==='terza'?'Ha vinto il Criceto Mannaro!':'Ha vinto il Villaggio!'}
-          </p>
-          <p className="text-gray-500 text-sm mb-6">Partita terminata</p>
-          <div className="p-4 rounded-2xl"
-               style={{background:role?.color+'1a', border:`1px solid ${role?.color}44`}}>
-            <p className="text-gray-400 text-sm mb-1">Il tuo ruolo era:</p>
-            <p className="font-cinzel text-white text-xl">{role?.icon} {role?.name}</p>
-            <p className="text-xs mt-2" style={{color:role?.color}}>
-              {role?.team==='lupi'?'⚔️ Fazione: Lupi':'🌾 Fazione: Villaggio'}
+        <div className="py-6 anim-fade-up">
+          {/* Intestazione */}
+          <div className="text-center mb-5">
+            <div className="text-6xl mb-3">{gameData.winner==='lupi'?'🐺':gameData.winner==='terza'?'🐹':'🌾'}</div>
+            <p className="font-cinzel text-moon text-2xl font-bold mb-1">
+              {gameData.winner==='lupi'?'Hanno vinto i Lupi!':gameData.winner==='terza'?'Ha vinto il Criceto Mannaro!':'Ha vinto il Villaggio!'}
             </p>
+            <p className="text-gray-500 text-sm">Partita terminata</p>
+          </div>
+
+          {/* Il tuo ruolo + esito personale */}
+          <div className="p-4 rounded-2xl mb-4"
+               style={{background:role?.color+'1a', border:`1px solid ${role?.color}44`}}>
+            <p className="text-gray-400 text-xs uppercase tracking-widest mb-1">Il tuo ruolo</p>
+            <p className="font-cinzel text-white text-xl mb-1">{role?.icon} {role?.name}</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs px-2 py-0.5 rounded-full" style={{background:role?.color+'22',border:`1px solid ${role?.color}44`,color:role?.color}}>
+                {role?.team==='lupi'?'⚔️ Lupi':role?.team==='terza'?'🐹 Terza Fazione':'🌾 Villaggio'}
+              </span>
+              <span className={`text-xs font-bold ${player?.alive?'text-green-400':'text-red-400'}`}>
+                {player?.alive ? '✓ Sopravvissuto/a' : '💀 Eliminato/a'}
+              </span>
+            </div>
+          </div>
+
+          {/* Recap chi era chi */}
+          <div className="rounded-2xl p-4 mb-4"
+               style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)'}}>
+            <p className="text-gray-500 text-xs uppercase tracking-widest mb-3">Tutti i ruoli rivelati</p>
+            <div className="flex flex-col gap-2">
+              {Object.values(gameData.players||{}).map(p=>{
+                const r = ROLES[p.role];
+                const isMe = p.id === playerId;
+                return (
+                  <div key={p.id} className="flex items-center gap-2.5 py-1"
+                       style={{opacity: p.alive ? 1 : 0.55}}>
+                    <span className="text-xl w-7 text-center shrink-0">{p.alive ? r?.icon : '💀'}</span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-white text-sm font-bold">{p.name}</span>
+                      {isMe && <span className="text-[10px] text-gray-500 ml-1">(tu)</span>}
+                    </div>
+                    <span className="text-xs shrink-0" style={{color:r?.color}}>{r?.name}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
