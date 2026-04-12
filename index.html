@@ -1291,13 +1291,6 @@ function TutorialModal({ isOpen, onClose }) {
 function HomeScreen({onCreateGame, onViewHistory, onSetup}) {
   const [showTutorial, setShowTutorial] = useState(false);
 
-  useEffect(() => {
-    // Mostra tutorial automaticamente al primo accesso
-    if (!localStorage.getItem('lif_tutorial_done')) {
-      setShowTutorial(true);
-    }
-  }, []);
-
   return (
     <div className="min-h-screen layer flex flex-col items-center justify-center p-6">
       <UserProfile />
