@@ -1134,9 +1134,170 @@ function SetupModal({onClose}) {
 }
 
 /* ================================================================
+   TUTORIAL MODAL
+   ================================================================ */
+function TutorialModal({ isOpen, onClose }) {
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const steps = [
+    {
+      title: "Benvenuto a Lupus in Fabula",
+      content: "Lupus in Fabula è un gioco di deduzione sociale e inganno. C'è un Narratore che controlla il gioco e dei Giocatori che cercano di scoprire l'identità dei lupi mannari.",
+      icon: "🐺"
+    },
+    {
+      title: "Le tre fazioni",
+      content: "Nel gioco ci sono tre fazioni: i Lupi (🐺) che attaccano di notte, il Villaggio (🌾) che elimina chi sospetta di giorno, e la Terza Fazione (🐹) con obiettivi segreti.",
+      icon: "⚔️"
+    },
+    {
+      title: "La notte del narratore",
+      content: "Alla notte, il Narratore fa chiudere gli occhi a tutti. I ruoli speciali si svegliano uno alla volta e agiscono silenziosamente dal proprio telefono: il Veggente scopre chi è lupo, la Guardia protegge, la Strega usa pozioni.",
+      icon: "🌙"
+    },
+    {
+      title: "L'alba - Le vittime rivelate",
+      content: "Il Narratore annuncia chi è stato eliminato dai lupi durante la notte (o se nessuno è morto per miracolo). Ogni vittima rivela il suo ruolo e scompare dal gioco.",
+      icon: "☀️"
+    },
+    {
+      title: "Il giorno - Discussione e dibattito",
+      content: "Tutti discutono e cercano di capire chi sono i lupi. Il timer scorre inesorabile. Puoi accusare qualcuno, difenderti, cercare contraddizioni nelle storie. Osserva chi è strano, chi si contraddice.",
+      icon: "💬"
+    },
+    {
+      title: "La votazione",
+      content: "Quando il tempo finisce, il villaggio vota per eliminare chi sospetta di essere un lupo. Chi riceve più voti viene eliminato e rivela il suo ruolo a tutti. Se era un lupo, bene. Se era un villico, il gioco diventa più difficile.",
+      icon: "🗳️"
+    },
+    {
+      title: "Come si vince",
+      content: "Il Villaggio vince eliminando tutti i lupi. I Lupi vincono quando diventano tanti quanti i villici rimasti. La Terza Fazione ha un obiettivo segreto tutto suo e vince quando lo completa.",
+      icon: "🏆"
+    },
+    {
+      title: "Come iniziare una partita",
+      content: "Il Narratore crea la partita, sceglie i giocatori e assegna i ruoli. Poi scansiona i QR code con i giocatori. Ogni giocatore tocca il proprio schermo per scoprire il ruolo segreto. La partita inizia!",
+      icon: "🎮"
+    }
+  ];
+
+  const handleNext = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      // Completa tutorial
+      localStorage.setItem('lif_tutorial_done', 'true');
+      onClose();
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  const step = steps[currentStep];
+  const isFirst = currentStep === 0;
+  const isLast = currentStep === steps.length - 1;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+         style={{background: 'rgba(0, 0, 0, 0.88)'}}>
+      <div className="w-full max-w-md rounded-3xl overflow-hidden anim-fade-up"
+           style={{background: 'linear-gradient(135deg, rgba(13,17,23,0.95) 0%, rgba(20,25,35,0.95) 100%)', border: '1px solid rgba(226,201,126,0.15)'}}>
+
+        {/* Header con progress */}
+        <div className="px-6 pt-6 pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => { onClose(); localStorage.setItem('lif_tutorial_done', 'true'); }}
+              className="text-gray-500 hover:text-white transition-colors text-2xl leading-none">
+              ✕
+            </button>
+            <div className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+              Step {currentStep + 1} di {steps.length}
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full h-1 rounded-full" style={{background: 'rgba(255,255,255,0.08)'}}>
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                background: 'linear-gradient(90deg, #e2c97e 0%, #c4931a 100%)',
+                width: `${((currentStep + 1) / steps.length) * 100}%`
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="px-6 py-8 text-center">
+          <div className="text-6xl mb-4 leading-none">{step.icon}</div>
+          <h2 className="font-cinzel text-2xl font-bold text-moon mb-3 leading-snug">
+            {step.title}
+          </h2>
+          <p className="text-gray-400 text-sm leading-relaxed">
+            {step.content}
+          </p>
+        </div>
+
+        {/* Navigation buttons */}
+        <div className="px-6 pb-6 flex gap-3">
+          <button
+            onClick={handlePrev}
+            disabled={isFirst}
+            className="flex-1 py-3 rounded-xl font-bold transition-all duration-200"
+            style={{
+              background: isFirst ? 'rgba(255,255,255,0.05)' : 'rgba(226,201,126,0.1)',
+              border: isFirst ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(226,201,126,0.3)',
+              color: isFirst ? '#666' : '#e2c97e'
+            }}>
+            ← Indietro
+          </button>
+
+          <button
+            onClick={handleNext}
+            className="flex-1 py-3 rounded-xl font-bold btn-gold transition-all duration-200">
+            {isLast ? '🐺 Inizia a giocare! →' : 'Avanti →'}
+          </button>
+        </div>
+
+        {/* Step dots */}
+        <div className="pb-6 flex justify-center gap-2">
+          {steps.map((_, i) => (
+            <div
+              key={i}
+              className="step-dot transition-all duration-300"
+              style={{
+                background: i <= currentStep ? '#e2c97e' : 'rgba(255,255,255,0.12)',
+                width: i === currentStep ? '24px' : '8px'
+              }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================
    HOME SCREEN
    ================================================================ */
 function HomeScreen({onCreateGame, onViewHistory, onSetup}) {
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    // Mostra tutorial automaticamente al primo accesso
+    if (!localStorage.getItem('lif_tutorial_done')) {
+      setShowTutorial(true);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen layer flex flex-col items-center justify-center p-6">
       <UserProfile />
@@ -1158,10 +1319,17 @@ function HomeScreen({onCreateGame, onViewHistory, onSetup}) {
           </button>
         </div>
 
-        <button onClick={onSetup}
-          className="mt-8 text-gray-600 text-xs hover:text-gray-400 transition-colors underline">
-          ⚙️ Configura Firebase (multi-dispositivo)
-        </button>
+        <div className="flex gap-2 justify-center mt-6">
+          <button onClick={onSetup}
+            className="text-gray-600 text-xs hover:text-gray-400 transition-colors underline">
+            ⚙️ Configura Firebase (multi-dispositivo)
+          </button>
+          <span className="text-gray-700 text-xs">·</span>
+          <button onClick={() => setShowTutorial(true)}
+            className="text-gray-600 text-xs hover:text-gray-400 transition-colors underline">
+            ? Come si gioca
+          </button>
+        </div>
 
         {!isFirebaseConfigured() && (
           <div className="mt-3 px-3 py-2 rounded-xl text-xs text-yellow-600"
@@ -1172,6 +1340,8 @@ function HomeScreen({onCreateGame, onViewHistory, onSetup}) {
 
         <p className="text-gray-700 text-xs mt-10">v1.0 · Un viaggio nella notte</p>
       </div>
+
+      <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
     </div>
   );
 }
