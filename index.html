@@ -1454,66 +1454,83 @@ function CreateGameScreen({onStart, onBack}) {
 
   return (
     <div className="min-h-screen layer pb-28">
-      {/* Header */}
-      <div className="sticky top-0 z-10 flex items-center gap-3 px-4 pt-5 pb-3"
-           style={{background:'rgba(13,17,23,0.95)', backdropFilter:'blur(10px)'}}>
-        <button onClick={onBack} className="text-gray-500 hover:text-white text-2xl transition-colors leading-none">←</button>
-        <div className="flex-1">
-          <h2 className="font-cinzel text-lg font-bold text-moon leading-none">
-            {step===1?'Giocatori':'Ruoli'}
-          </h2>
-          <p className="text-gray-600 text-xs mt-0.5">Passo {step} di 2</p>
+
+      {/* Header con progress bar */}
+      <div className="sticky top-0 z-10 px-4 pt-5 pb-3"
+           style={{background:'rgba(13,17,23,0.97)', backdropFilter:'blur(12px)'}}>
+        <div className="flex items-center gap-3 mb-3">
+          <button onClick={onBack} className="text-gray-500 hover:text-white text-2xl transition-colors leading-none">←</button>
+          <div className="flex-1">
+            <h2 className="font-cinzel text-lg font-bold text-moon leading-none">
+              {step===1 ? 'Chi gioca stanotte?' : 'Scegli i ruoli'}
+            </h2>
+            <p className="text-gray-600 text-xs mt-0.5">Passo {step} di 2</p>
+          </div>
+          <span className="font-cinzel text-xs text-gray-600">{step}/2</span>
         </div>
-        {/* Step dots */}
-        <div className="flex gap-1.5">
-          {[1,2].map(s=>(
-            <div key={s} className="step-dot"
-                 style={{background:s<=step?'#e2c97e':'rgba(255,255,255,0.12)'}}/>
-          ))}
+        {/* Progress bar */}
+        <div className="h-0.5 rounded-full w-full" style={{background:'rgba(255,255,255,0.07)'}}>
+          <div className="h-full rounded-full transition-all duration-500"
+               style={{width: step===1 ? '50%' : '100%', background:'linear-gradient(90deg,#7a5c0e,#e2c97e)'}} />
         </div>
       </div>
 
-      <div className="px-4">
-        {/* STEP 1: Players */}
+      <div className="px-4 pt-4">
+
+        {/* ── STEP 1: Giocatori ── */}
         {step===1 && (
           <div className="anim-fade-up">
-            <p className="text-gray-500 text-sm mb-4">Minimo 4 giocatori. Modifica i nomi o aggiungine altri.</p>
 
-            <div className="flex flex-col gap-2 mb-3">
+            {/* Contatore grande */}
+            <div className="text-center mb-6">
+              <div className="inline-flex items-baseline gap-1">
+                <span className="font-cinzel text-6xl font-bold moon-glow">{validPlayers.length}</span>
+                <span className="font-cinzel text-2xl text-gray-600">/{Math.max(validPlayers.length,4)}</span>
+              </div>
+              <p className="text-gray-600 text-xs mt-1 tracking-wider uppercase">
+                {validPlayers.length < 4 ? `Aggiungi ancora ${4-validPlayers.length} giocator${4-validPlayers.length===1?'e':'i'}` : '✓ Pronti a iniziare'}
+              </p>
+            </div>
+
+            {/* Lista giocatori */}
+            <div className="flex flex-col gap-2 mb-4">
               {players.map((name,i) => (
-                <div key={i} className="flex items-center gap-2 rounded-xl px-3 py-3 glass">
-                  <span className="font-cinzel text-moon text-sm font-bold w-5 text-center shrink-0">{i+1}</span>
+                <div key={i} className="flex items-center gap-3 rounded-2xl px-3 py-3"
+                     style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
+                  {/* Avatar numerato */}
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-cinzel font-bold text-sm"
+                       style={{background:`hsl(${i*47+200},40%,22%)`, border:`1px solid hsl(${i*47+200},50%,35%)`, color:`hsl(${i*47+200},70%,70%)`}}>
+                    {i+1}
+                  </div>
                   <input type="text" value={name}
                     onChange={e=>setPlayerName(i,e.target.value)}
                     placeholder={`Giocatore ${i+1}`}
-                    className="flex-1 bg-transparent text-white text-sm outline-none placeholder-gray-600"/>
-                  <button onClick={()=>removePlayer(i)} className="text-gray-600 hover:text-red-400 transition-colors text-lg leading-none">✕</button>
+                    className="flex-1 bg-transparent text-white text-sm outline-none placeholder-gray-600 font-semibold"/>
+                  <button onClick={()=>removePlayer(i)}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-all text-sm">✕</button>
                 </div>
               ))}
             </div>
 
-            {/* Add player */}
-            <div className="flex gap-2 mb-5">
+            {/* Input aggiunta */}
+            <div className="flex gap-2 mb-3">
               <input ref={inputRef} type="text" value={inputName}
                 onChange={e=>setInputName(e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&addPlayer()}
-                placeholder="Aggiungi giocatore…"
-                className="flex-1 input-dark rounded-xl px-4 py-3 text-sm"/>
-              <button onClick={addPlayer} className="btn-gold px-5 rounded-xl text-lg font-bold">+</button>
+                placeholder="Nome giocatore…"
+                className="flex-1 input-dark rounded-2xl px-4 py-3.5 text-sm"/>
+              <button onClick={addPlayer}
+                className="btn-gold w-12 rounded-2xl text-xl font-bold flex items-center justify-center">+</button>
             </div>
 
-            <div className="text-center">
-              <span className={`text-sm font-bold ${canStep1?'text-green-400':'text-gray-500'}`}>
-                {validPlayers.length} giocatori {canStep1?'✓':'(min. 4)'}
-              </span>
-            </div>
           </div>
         )}
 
-        {/* STEP 2: Roles */}
+        {/* ── STEP 2: Ruoli ── */}
         {step===2 && (
           <div className="anim-fade-up">
-            {/* Guida rapida bilanciamento */}
+
+            {/* Preset suggerito */}
             {(() => {
               const n = rolesNeeded;
               const presets = {
@@ -1529,8 +1546,8 @@ function CreateGameScreen({onStart, onBack}) {
               if (!preset) return null;
               const villici = n - preset.lupi - preset.spec.length;
               return (
-                <div className="rounded-xl p-3 mb-3 anim-fade-in"
-                     style={{background:'rgba(226,201,126,0.06)', border:'1px solid rgba(226,201,126,0.18)'}}>
+                <div className="rounded-2xl p-4 mb-4 anim-fade-in"
+                     style={{background:'rgba(226,201,126,0.06)', border:'1px solid rgba(226,201,126,0.2)'}}>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-moon text-xs font-bold uppercase tracking-widest">✨ Suggerito per {n} giocatori</p>
                     <button
@@ -1538,8 +1555,8 @@ function CreateGameScreen({onStart, onBack}) {
                         const r = [...Array(preset.lupi).fill('lupo'), ...preset.spec, ...Array(Math.max(0,villici)).fill('villico')];
                         setRoles(r.slice(0,n));
                       }}
-                      className="text-[10px] px-2.5 py-1 rounded-full font-bold active:scale-95 transition-all"
-                      style={{background:'rgba(226,201,126,0.15)', border:'1px solid rgba(226,201,126,0.3)', color:'#e2c97e'}}>
+                      className="text-[10px] px-3 py-1 rounded-full font-bold active:scale-95 transition-all"
+                      style={{background:'rgba(226,201,126,0.18)', border:'1px solid rgba(226,201,126,0.4)', color:'#e2c97e'}}>
                       Applica
                     </button>
                   </div>
@@ -1549,112 +1566,101 @@ function CreateGameScreen({onStart, onBack}) {
                       return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full" style={{background:r.color+'22',color:r.color,border:`1px solid ${r.color}44`}}>{r.icon} {r.name}</span>;
                     })}
                   </div>
-                  <p className="text-gray-500 text-[10px] italic">{preset.note}</p>
+                  <p className="text-gray-600 text-[10px] italic">{preset.note}</p>
                 </div>
               );
             })()}
 
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-gray-500 text-sm">Assegna esattamente <span className="text-moon font-bold">{rolesNeeded}</span> ruoli.</p>
-              <span className={`font-bold text-sm ${rolesOk?'text-green-400':'text-red-400'}`}>
-                {roles.length}/{rolesNeeded}
-              </span>
+            {/* Balance bar */}
+            <div className="rounded-2xl p-4 mb-4"
+                 style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)'}}>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs text-gray-500 flex items-center gap-1">🐺 <span className="font-bold text-red-400">{wolfCount} lupi</span></span>
+                <span className="text-xs font-bold" style={{color: rolesOk ? '#4ade80' : '#6b7280'}}>{roles.length}/{rolesNeeded}</span>
+                <span className="text-xs text-gray-500 flex items-center gap-1"><span className="font-bold text-green-400">{villCount} villaggio</span> 🌾</span>
+              </div>
+              {/* Barra bilanciamento */}
+              <div className="h-2 rounded-full overflow-hidden flex" style={{background:'rgba(255,255,255,0.07)'}}>
+                {roles.length > 0 && <>
+                  <div className="h-full transition-all duration-500 rounded-l-full"
+                       style={{width:`${(wolfCount/roles.length)*100}%`, background:'linear-gradient(90deg,#8b1a1a,#ef4444)'}} />
+                  <div className="h-full transition-all duration-500 rounded-r-full"
+                       style={{width:`${(villCount/roles.length)*100}%`, background:'linear-gradient(90deg,#166534,#4ade80)'}} />
+                </>}
+              </div>
+              {balanceMsg && <p className={`text-center text-xs font-bold mt-2 ${balanceMsg.color}`}>⚠️ {balanceMsg.text}</p>}
             </div>
 
-            {/* Balance indicator */}
-            <div className="flex gap-2 mb-4">
-              <div className="flex-1 p-2 rounded-xl text-center"
-                   style={{background:'rgba(139,26,26,0.15)', border:'1px solid rgba(139,26,26,0.25)'}}>
-                <p className="text-xs text-gray-500">🐺 Lupi</p>
-                <p className="font-cinzel text-red-400 font-bold text-lg">{wolfCount}</p>
-              </div>
-              <div className="flex-1 p-2 rounded-xl text-center"
-                   style={{background:'rgba(26,74,26,0.15)', border:'1px solid rgba(26,74,26,0.25)'}}>
-                <p className="text-xs text-gray-500">🌾 Villaggio</p>
-                <p className="font-cinzel text-green-400 font-bold text-lg">{villCount}</p>
-              </div>
-            </div>
-
-            {balanceMsg && (
-              <div className={`text-center text-xs font-bold mb-3 ${balanceMsg.color}`}>
-                ⚠️ {balanceMsg.text}
+            {/* Composizione attuale — strip orizzontale */}
+            {roles.length > 0 && (
+              <div className="mb-4">
+                <p className="text-gray-600 text-xs uppercase tracking-wider mb-2">Composizione attuale</p>
+                <div className="flex gap-2 overflow-x-auto pb-1" style={{scrollbarWidth:'none'}}>
+                  {roles.map((rid,i) => {
+                    const r=ROLES[rid]; if(!r) return null;
+                    return (
+                      <button key={i} onClick={()=>removeRole(i)}
+                        className="flex-shrink-0 flex flex-col items-center gap-1 p-2 rounded-xl transition-all active:scale-90"
+                        style={{background:r.color+'20', border:`1px solid ${r.color}44`, minWidth:52}}>
+                        <span className="text-xl">{r.icon}</span>
+                        <span className="text-[9px] text-gray-400 font-bold leading-none">{r.name.split(' ')[0]}</span>
+                        <span className="text-[8px] text-gray-600">✕</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Current roles */}
-            <div className="rounded-xl p-3 mb-4 glass">
-              <p className="text-gray-600 text-xs uppercase tracking-wider mb-2">Composizione attuale</p>
-              <div className="flex flex-wrap gap-2">
-                {roles.length===0 && <p className="text-gray-700 text-sm">Nessun ruolo</p>}
-                {roles.map((rid,i) => {
-                  const r=ROLES[rid];
-                  return (
-                    <button key={i} onClick={()=>removeRole(i)}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold hover:opacity-70 transition-opacity"
-                      style={{background:r.color+'33', border:`1px solid ${r.color}55`, color:'#fff'}}
-                      title="Tocca per rimuovere">
-                      {r.icon} {r.name} <span className="text-gray-500 ml-0.5">✕</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Role picker */}
-            <p className="text-gray-600 text-xs uppercase tracking-wider mb-2">Aggiungi ruoli</p>
-            <div className="grid grid-cols-2 gap-2">
-              {Object.values(ROLES).map(r => (
-                <div key={r.id} className="flex flex-col">
-                  <div className="flex flex-col p-2.5 rounded-xl transition-all h-full"
-                       style={{background:r.color+'1a', border:`1px solid ${r.color}33`}}>
-                    {/* Top row: icona + contatore + toggle */}
-                    <div className="flex items-start justify-between mb-1.5">
-                      <span className="text-2xl leading-none">{r.icon}</span>
-                      <div className="flex items-center gap-1">
-                        {roleCount[r.id] > 0 && (
-                          <span className="text-xs font-bold" style={{color:r.color}}>{roleCount[r.id]}×</span>
+            {/* Role picker — cards full width */}
+            <p className="text-gray-600 text-xs uppercase tracking-wider mb-3">Aggiungi ruoli</p>
+            <div className="flex flex-col gap-3">
+              {Object.values(ROLES).map(r => {
+                const vis = ROLE_VISUALS[r.id];
+                const count = roleCount[r.id] || 0;
+                return (
+                  <div key={r.id}>
+                    <button
+                      onClick={()=>addRole(r.id)}
+                      className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all active:scale-[0.98]"
+                      style={{background: vis ? vis.gradient : r.color+'18',
+                              border:`1px solid ${r.color}44`,
+                              boxShadow: count > 0 ? `0 0 16px ${r.color}33` : 'none'}}>
+                      {/* Icona con glow */}
+                      <div className="relative shrink-0">
+                        <span className="text-4xl" style={{filter: vis ? `drop-shadow(0 0 10px ${vis.glow})` : 'none'}}>{r.icon}</span>
+                        {count > 0 && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center"
+                                style={{background:r.color, color:'#0d1117'}}>{count}</span>
                         )}
-                        <button onClick={()=>setExpandedRole(expandedRole===r.id?null:r.id)}
-                          className="w-6 h-6 rounded-full flex items-center justify-center transition-all"
-                          style={{background:expandedRole===r.id?r.color+'44':'rgba(255,255,255,0.08)',
-                                  color:expandedRole===r.id?r.color:'#6b7280',
-                                  border:`1px solid ${expandedRole===r.id?r.color+'66':'rgba(255,255,255,0.1)'}`}}>
-                          <span style={{fontSize:'0.65rem',display:'inline-block',
-                                        transform:expandedRole===r.id?'rotate(180deg)':'rotate(0deg)',
-                                        transition:'transform 0.25s'}}>▾</span>
-                        </button>
                       </div>
-                    </div>
-                    {/* Nome + team + tap to add */}
-                    <button onClick={()=>addRole(r.id)}
-                      className="flex-1 text-left active:scale-[0.97] transition-all">
-                      <p className="text-white text-sm font-bold leading-tight">{r.name}</p>
-                      <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full mt-1"
-                            style={{background:r.color+'22', color:r.color, border:`1px solid ${r.color}44`}}>
-                        {r.team==='lupi'?'Lupi':'Villaggio'}
-                      </span>
-                      <p className="text-gray-600 text-[9px] mt-1.5">Tocca per aggiungere</p>
+                      {/* Testo */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-bold text-base leading-tight">{r.name}</p>
+                        <p className="text-gray-400 text-xs mt-0.5 line-clamp-2 leading-relaxed">{r.description}</p>
+                        <span className="inline-block text-[10px] px-2 py-0.5 rounded-full mt-1.5"
+                              style={{background:r.color+'22', color:r.color, border:`1px solid ${r.color}44`}}>
+                          {r.team==='lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
+                        </span>
+                      </div>
+                      {/* Plus */}
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-lg font-bold"
+                           style={{background:r.color+'33', border:`1px solid ${r.color}66`, color:r.color}}>
+                        +
+                      </div>
                     </button>
                   </div>
-                  {/* Descrizione collassabile */}
-                  {expandedRole===r.id && (
-                    <div className="px-3 py-2.5 rounded-b-xl -mt-1 anim-fade-in text-xs text-gray-300 leading-relaxed"
-                         style={{background:r.color+'0d', borderLeft:`3px solid ${r.color}66`,
-                                 borderRight:`1px solid ${r.color}22`, borderBottom:`1px solid ${r.color}22`}}>
-                      {r.description}
-                      {r.tip && <p className="mt-1.5 text-gray-500 italic">💡 {r.tip}</p>}
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
+
           </div>
         )}
       </div>
 
-      {/* Fixed bottom button */}
+      {/* Fixed bottom CTA */}
       <div className="fixed bottom-0 left-0 right-0 p-4"
-           style={{background:'linear-gradient(to top, rgba(13,17,23,1) 60%, transparent)'}}>
+           style={{background:'linear-gradient(to top, rgba(13,17,23,1) 65%, transparent)'}}>
         <button
           onClick={()=>{
             if(step===1 && canStep1) {
@@ -1677,12 +1683,12 @@ function CreateGameScreen({onStart, onBack}) {
           }}
           disabled={step===1?!canStep1:!rolesOk}
           className="btn-gold w-full py-4 rounded-2xl text-base">
-          {step===1 ? 'Continua → Ruoli' : '🎮 Inizia la Partita!'}
+          {step===1 ? '→ Scegli i Ruoli' : '🎮 Inizia la Partita!'}
         </button>
         {step===2 && !rolesOk && (
           <p className="text-center text-red-400 text-xs mt-2">
             {roles.length < rolesNeeded
-              ? `Aggiungi ${rolesNeeded-roles.length} ruolo/i`
+              ? `Aggiungi ancora ${rolesNeeded-roles.length} ruolo/i`
               : `Rimuovi ${roles.length-rolesNeeded} ruolo/i`}
           </p>
         )}
