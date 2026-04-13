@@ -356,10 +356,18 @@ window._playAudioBlob = (blob) => {
 window.speakNarration = (text) => {
   if (window._elAudio) { window._elAudio.pause(); window._elAudio = null; }
 
-  // ── Modalità browser: salta ElevenLabs completamente ──
-  if (localStorage.getItem('lif_tts_mode') === 'browser') {
+  const mode = localStorage.getItem('lif_tts_mode') || 'script';
+
+  // ── Modalità script: solo testo a schermo, nessun audio ──
+  if (mode === 'script') {
     window.dispatchEvent(new Event('narrator_start'));
-    window.dispatchEvent(new Event('narrator_end'));
+    setTimeout(() => window.dispatchEvent(new Event('narrator_end')), 200);
+    return;
+  }
+
+  // ── Modalità browser (legacy) ──
+  if (mode === 'browser') {
+    window.dispatchEvent(new Event('narrator_start'));
     window._speakBrowser(text);
     return;
   }
@@ -1789,7 +1797,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   const [elTestStatus, setElTestStatus] = useState('');
   const [elVoiceList, setElVoiceList] = useState([]);
   const [elVoicesLoading, setElVoicesLoading] = useState(false);
-  const [ttsMode, setTtsMode] = useState(() => localStorage.getItem('lif_tts_mode') || 'elevenlabs');
+  const [ttsMode, setTtsMode] = useState(() => localStorage.getItem('lif_tts_mode') || 'script');
   const [dayTimerMins, setDayTimerMins] = useState(() => parseInt(localStorage.getItem('lif_day_timer') || '5'));
   const [votePrompt, setVotePrompt] = useState(false); // sollecito votazione
 
@@ -2342,6 +2350,25 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
           </div>
         )}
 
+        {/* Script card — testo da leggere ad alta voce */}
+        {narration && ttsMode === 'script' && (
+          <div className="mb-5 anim-fade-up rounded-2xl p-5 relative"
+               style={{background:'rgba(226,201,126,0.05)', border:'1px solid rgba(226,201,126,0.25)',
+                       boxShadow:'0 0 30px rgba(226,201,126,0.06)'}}>
+            {/* Icona rotolo */}
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">📜</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest" style={{color:'rgba(226,201,126,0.5)'}}>
+                Leggi ad alta voce
+              </span>
+            </div>
+            {/* Testo narrazione */}
+            <p className="font-cinzel text-white text-base leading-relaxed italic">
+              "{narration}"
+            </p>
+          </div>
+        )}
+
         {/* Log narrazione collassabile */}
         {narrationLog.length > 0 && (
           <div className="mb-6">
@@ -2435,27 +2462,25 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
             {/* ---- Modalità voce ---- */}
             <div className="mt-4 w-full">
               <p className="text-gray-500 text-[10px] uppercase tracking-widest mb-2">Voce narratore</p>
-              <div className="flex rounded-xl overflow-hidden" style={{border:'1px solid rgba(255,255,255,0.1)'}}>
+              <div className="flex gap-1 rounded-xl overflow-hidden p-0.5"
+                     style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.08)'}}>
                 <button
-                  onClick={()=>{ setTtsMode('elevenlabs'); localStorage.setItem('lif_tts_mode','elevenlabs'); }}
-                  className="flex-1 py-2.5 text-xs font-bold transition-all"
-                  style={ttsMode==='elevenlabs'
-                    ? {background:'rgba(226,201,126,0.18)', color:'#e2c97e', borderRight:'1px solid rgba(255,255,255,0.1)'}
-                    : {background:'transparent', color:'#6b7280', borderRight:'1px solid rgba(255,255,255,0.1)'}}>
-                  🎭 Daniel
+                  onClick={()=>{ setTtsMode('script'); localStorage.setItem('lif_tts_mode','script'); }}
+                  className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                  style={ttsMode==='script'
+                    ? {background:'rgba(226,201,126,0.2)', color:'#e2c97e', border:'1px solid rgba(226,201,126,0.3)'}
+                    : {color:'#6b7280'}}>
+                  📖 Script
                 </button>
                 <button
-                  onClick={()=>{ setTtsMode('browser'); localStorage.setItem('lif_tts_mode','browser'); }}
-                  className="flex-1 py-2.5 text-xs font-bold transition-all"
-                  style={ttsMode==='browser'
-                    ? {background:'rgba(99,179,237,0.15)', color:'#63b3ed'}
-                    : {background:'transparent', color:'#6b7280'}}>
-                  🔈 Browser
+                  onClick={()=>{ setTtsMode('voice'); localStorage.setItem('lif_tts_mode','voice'); }}
+                  className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
+                  style={ttsMode==='voice'
+                    ? {background:'rgba(139,92,246,0.2)', color:'#a78bfa', border:'1px solid rgba(139,92,246,0.3)'}
+                    : {color:'#6b7280'}}>
+                  🎙️ Voce AI
                 </button>
               </div>
-              {ttsMode==='browser' && (
-                <p className="text-gray-600 text-[10px] mt-1.5 text-center">Voce di sistema — ElevenLabs disattivato</p>
-              )}
             </div>
 
             {/* ---- Test voce narratore ---- */}
