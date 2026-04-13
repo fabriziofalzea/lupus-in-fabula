@@ -1531,66 +1531,67 @@ function CreateGameScreen({onStart, onBack}) {
         {step===2 && (
           <div className="anim-fade-up">
 
-            {/* Preset suggerito */}
+            {/* Preset + Balance — due box affiancati */}
             {(() => {
               const n = rolesNeeded;
               const presets = {
-                4:  { lupi:1, spec:['veggente'],          note:'Partita rapida, ideale per iniziare.' },
-                5:  { lupi:1, spec:['veggente','guardia'], note:'Bilanciata. Buona per prime volte.' },
-                6:  { lupi:2, spec:['veggente','guardia'], note:'Competitiva. Lupi in vantaggio numerico.' },
-                7:  { lupi:2, spec:['veggente','guardia','strega'], note:'Classica Lupus. Raccomandata.' },
-                8:  { lupi:2, spec:['veggente','guardia','strega','cacciatore'], note:'Più ruoli speciali, più imprevedibile.' },
-                9:  { lupi:3, spec:['veggente','guardia','strega','cacciatore'], note:'Lupi forti — il villaggio deve coordinarsi.' },
-                10: { lupi:3, spec:['veggente','guardia','strega','cacciatore','medium'], note:'Partita lunga e ricca di colpi di scena.' },
+                4:  { lupi:1, spec:['veggente'],          note:'Rapida' },
+                5:  { lupi:1, spec:['veggente','guardia'], note:'Bilanciata' },
+                6:  { lupi:2, spec:['veggente','guardia'], note:'Competitiva' },
+                7:  { lupi:2, spec:['veggente','guardia','strega'], note:'Classica' },
+                8:  { lupi:2, spec:['veggente','guardia','strega','cacciatore'], note:'Ricca' },
+                9:  { lupi:3, spec:['veggente','guardia','strega','cacciatore'], note:'Intensa' },
+                10: { lupi:3, spec:['veggente','guardia','strega','cacciatore','medium'], note:'Epica' },
               };
               const preset = presets[n] || (n>10 ? presets[10] : null);
-              if (!preset) return null;
-              const villici = n - preset.lupi - preset.spec.length;
+              const villici = preset ? n - preset.lupi - preset.spec.length : 0;
               return (
-                <div className="rounded-2xl p-4 mb-4 anim-fade-in"
-                     style={{background:'rgba(226,201,126,0.06)', border:'1px solid rgba(226,201,126,0.2)'}}>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-moon text-xs font-bold uppercase tracking-widest">✨ Suggerito per {n} giocatori</p>
-                    <button
-                      onClick={()=>{
-                        const r = [...Array(preset.lupi).fill('lupo'), ...preset.spec, ...Array(Math.max(0,villici)).fill('villico')];
-                        setRoles(r.slice(0,n));
-                      }}
-                      className="text-[10px] px-3 py-1 rounded-full font-bold active:scale-95 transition-all"
-                      style={{background:'rgba(226,201,126,0.18)', border:'1px solid rgba(226,201,126,0.4)', color:'#e2c97e'}}>
-                      Applica
-                    </button>
+                <div className="flex gap-2 mb-4">
+                  {/* Box suggerimento */}
+                  {preset && (
+                    <div className="flex-1 rounded-2xl p-3"
+                         style={{background:'rgba(226,201,126,0.05)', border:'1px solid rgba(226,201,126,0.18)'}}>
+                      <p className="text-moon text-[10px] font-bold uppercase tracking-widest mb-2">✨ Suggerito</p>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {Array(preset.lupi).fill('lupo').concat(preset.spec).concat(Array(Math.max(0,villici)).fill('villico')).map((rid,i)=>{
+                          const r=ROLES[rid]; if(!r) return null;
+                          return <span key={i} className="text-base">{r.icon}</span>;
+                        })}
+                      </div>
+                      <p className="text-gray-600 text-[10px] italic mb-2">{preset.note}</p>
+                      <button
+                        onClick={()=>{
+                          const r = [...Array(preset.lupi).fill('lupo'), ...preset.spec, ...Array(Math.max(0,villici)).fill('villico')];
+                          setRoles(r.slice(0,n));
+                        }}
+                        className="w-full text-[10px] py-1.5 rounded-xl font-bold active:scale-95 transition-all"
+                        style={{background:'rgba(226,201,126,0.15)', border:'1px solid rgba(226,201,126,0.35)', color:'#e2c97e'}}>
+                        Applica
+                      </button>
+                    </div>
+                  )}
+                  {/* Box bilanciamento */}
+                  <div className="flex-1 rounded-2xl p-3"
+                       style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)'}}>
+                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-2">⚖️ Squadre</p>
+                    <div className="flex items-center justify-around mb-2">
+                      <div className="text-center">
+                        <p className="font-cinzel text-2xl font-bold text-red-400">{wolfCount}</p>
+                        <p className="text-[10px] text-gray-600">🐺 lupi</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-cinzel text-xs font-bold" style={{color: rolesOk ? '#4ade80' : '#6b7280'}}>{roles.length}/{rolesNeeded}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-cinzel text-2xl font-bold text-green-400">{villCount}</p>
+                        <p className="text-[10px] text-gray-600">🌾 villa.</p>
+                      </div>
+                    </div>
+                    {balanceMsg && <p className={`text-center text-[10px] font-bold ${balanceMsg.color}`}>⚠️ Sbilancio</p>}
                   </div>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {Array(preset.lupi).fill('lupo').concat(preset.spec).concat(Array(Math.max(0,villici)).fill('villico')).map((rid,i)=>{
-                      const r=ROLES[rid]; if(!r) return null;
-                      return <span key={i} className="text-[11px] px-2 py-0.5 rounded-full" style={{background:r.color+'22',color:r.color,border:`1px solid ${r.color}44`}}>{r.icon} {r.name}</span>;
-                    })}
-                  </div>
-                  <p className="text-gray-600 text-[10px] italic">{preset.note}</p>
                 </div>
               );
             })()}
-
-            {/* Balance bar */}
-            <div className="rounded-2xl p-4 mb-4"
-                 style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)'}}>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs text-gray-500 flex items-center gap-1">🐺 <span className="font-bold text-red-400">{wolfCount} lupi</span></span>
-                <span className="text-xs font-bold" style={{color: rolesOk ? '#4ade80' : '#6b7280'}}>{roles.length}/{rolesNeeded}</span>
-                <span className="text-xs text-gray-500 flex items-center gap-1"><span className="font-bold text-green-400">{villCount} villaggio</span> 🌾</span>
-              </div>
-              {/* Barra bilanciamento */}
-              <div className="h-2 rounded-full overflow-hidden flex" style={{background:'rgba(255,255,255,0.07)'}}>
-                {roles.length > 0 && <>
-                  <div className="h-full transition-all duration-500 rounded-l-full"
-                       style={{width:`${(wolfCount/roles.length)*100}%`, background:'linear-gradient(90deg,#8b1a1a,#ef4444)'}} />
-                  <div className="h-full transition-all duration-500 rounded-r-full"
-                       style={{width:`${(villCount/roles.length)*100}%`, background:'linear-gradient(90deg,#166534,#4ade80)'}} />
-                </>}
-              </div>
-              {balanceMsg && <p className={`text-center text-xs font-bold mt-2 ${balanceMsg.color}`}>⚠️ {balanceMsg.text}</p>}
-            </div>
 
             {/* Composizione attuale — strip orizzontale */}
             {roles.length > 0 && (
