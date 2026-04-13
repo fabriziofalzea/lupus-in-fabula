@@ -158,8 +158,14 @@
     .input-dark::placeholder { color: rgba(255,255,255,0.25); }
 
     /* ---- Phase overlays ---- */
-    .overlay-night { background: radial-gradient(ellipse at top, #0d0d2e 0%, #060b10 70%); }
-    .overlay-day   { background: radial-gradient(ellipse at top, #1e1a06 0%, #0d0a00 70%); }
+    .overlay-night { background: radial-gradient(ellipse at 40% 0%, #150a30 0%, #0a0520 40%, #060810 100%); }
+    .overlay-dawn  { background: linear-gradient(to top, #2d1400 0%, #180900 40%, #080410 100%); }
+    .overlay-day   { background: radial-gradient(ellipse at 50% 110%, #2a1a00 0%, #150e00 45%, #090600 100%); }
+
+    @keyframes nightGlow  { 0%,100%{opacity:0.5} 50%{opacity:0.85} }
+    @keyframes dawnGlow   { 0%,100%{opacity:0.6} 50%{opacity:1} }
+    @keyframes dayGlow    { 0%,100%{opacity:0.35} 50%{opacity:0.6} }
+    .phase-glow { position:fixed; left:50%; transform:translateX(-50%); pointer-events:none; z-index:0; border-radius:50%; }
 
     /* ---- Scrollbar ---- */
     ::-webkit-scrollbar { width: 3px; height: 3px; }
@@ -2265,10 +2271,29 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   }, []);
 
   return (
-    <div className="min-h-screen layer pb-6" style={{maxWidth:480, margin:'0 auto'}}>
+    <div className={`min-h-screen layer pb-6 ${ phase==='night'||phase==='role_reveal'||phase==='waiting' ? 'overlay-night' : phase==='dawn_reveal' ? 'overlay-dawn' : phase==='day'||phase==='voting' ? 'overlay-day' : '' }`}
+         style={{maxWidth:480, margin:'0 auto'}}>
+
+      {/* Glow atmosferico di fase */}
+      {(phase==='night'||phase==='role_reveal'||phase==='waiting') && (
+        <div className="phase-glow" style={{top:'-60px',width:320,height:320,
+          background:'radial-gradient(ellipse, rgba(80,40,200,0.18) 0%, transparent 70%)',
+          animation:'nightGlow 4s ease-in-out infinite'}} />
+      )}
+      {phase==='dawn_reveal' && (
+        <div className="phase-glow" style={{bottom:0,top:'auto',width:420,height:260,
+          background:'radial-gradient(ellipse at bottom, rgba(255,110,30,0.22) 0%, rgba(200,60,10,0.08) 50%, transparent 75%)',
+          animation:'dawnGlow 3s ease-in-out infinite'}} />
+      )}
+      {(phase==='day'||phase==='voting') && (
+        <div className="phase-glow" style={{top:'-40px',width:360,height:280,
+          background:'radial-gradient(ellipse, rgba(200,140,20,0.12) 0%, transparent 70%)',
+          animation:'dayGlow 5s ease-in-out infinite'}} />
+      )}
+
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center gap-3 px-4 pt-5 pb-3"
-           style={{background:'rgba(13,17,23,0.95)', backdropFilter:'blur(10px)', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+           style={{background: phase==='night'||phase==='role_reveal'||phase==='waiting' ? 'rgba(10,5,25,0.95)' : phase==='dawn_reveal' ? 'rgba(25,10,0,0.95)' : 'rgba(15,10,0,0.95)', backdropFilter:'blur(10px)', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
         <button onClick={onBack} className="text-gray-500 hover:text-white text-2xl leading-none transition-colors">←</button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -3127,7 +3152,7 @@ function PlayerScreen({gameId, playerId}) {
     waiting:      { icon:'⏳', label:'In attesa di iniziare',       bg:'overlay-night', tip:'Il narratore sta preparando la partita…' },
     role_reveal:  { icon:'🌙', label:'Scopri il tuo ruolo!',        bg:'overlay-night', tip:'Assicurati che nessuno guardi il tuo schermo.' },
     night:        { icon:'🌙', label:'È notte — chiudi gli occhi',  bg:'overlay-night', tip:'Fai quello che il narratore ti dice.' },
-    dawn_reveal:  { icon:'🌅', label:'L\'alba sta sorgendo...',      bg:'overlay-day',   tip:'Ascolta il Game Master.' },
+    dawn_reveal:  { icon:'🌅', label:'L\'alba sta sorgendo...',      bg:'overlay-dawn',  tip:'Ascolta il Game Master.' },
     day:          { icon:'☀️', label:'È giorno — discutete!',       bg:'overlay-day',   tip:'Ragiona, osserva, e stai attento/a.' },
     voting:       { icon:'🗳️', label:'Votazione in corso',          bg:'overlay-day',   tip:'Chi eliminiamo oggi?' },
     ended:        { icon:'🏁', label:'Partita terminata',           bg:'',              tip:'' },
@@ -3135,7 +3160,24 @@ function PlayerScreen({gameId, playerId}) {
 
   return (
     <div className={`min-h-screen layer px-4 py-6 ${phaseDisplay.bg}`} style={{ pointerEvents: 'auto' }}>
-      
+
+      {/* Glow atmosferico di fase */}
+      {(phase==='night'||phase==='role_reveal'||phase==='waiting') && (
+        <div className="phase-glow" style={{top:'-60px',width:320,height:320,
+          background:'radial-gradient(ellipse, rgba(80,40,200,0.18) 0%, transparent 70%)',
+          animation:'nightGlow 4s ease-in-out infinite'}} />
+      )}
+      {phase==='dawn_reveal' && (
+        <div className="phase-glow" style={{bottom:0,top:'auto',width:420,height:260,
+          background:'radial-gradient(ellipse at bottom, rgba(255,110,30,0.22) 0%, rgba(200,60,10,0.08) 50%, transparent 75%)',
+          animation:'dawnGlow 3s ease-in-out infinite'}} />
+      )}
+      {(phase==='day'||phase==='voting') && (
+        <div className="phase-glow" style={{top:'-40px',width:360,height:280,
+          background:'radial-gradient(ellipse, rgba(200,140,20,0.12) 0%, transparent 70%)',
+          animation:'dayGlow 5s ease-in-out infinite'}} />
+      )}
+
       {/* Logger di debug — visibile SOLO in sviluppo (localhost) */}
       {window.location.hostname === 'localhost' && debugLog && (
         <div className="fixed bottom-0 left-0 right-0 bg-black/80 text-[8px] text-green-400 p-1 font-mono pointer-events-none z-[9999] opacity-40">
