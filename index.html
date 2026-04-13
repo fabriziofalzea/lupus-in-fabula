@@ -1488,7 +1488,7 @@ function CreateGameScreen({onStart, onBack}) {
                 <span className="font-cinzel text-2xl text-gray-600">/{Math.max(validPlayers.length,4)}</span>
               </div>
               <p className="text-gray-600 text-xs mt-1 tracking-wider uppercase">
-                {validPlayers.length < 4 ? `Aggiungi ancora ${4-validPlayers.length} giocator${4-validPlayers.length===1?'e':'i'}` : '✓ Pronti a iniziare'}
+                {validPlayers.length < 4 ? 'Aggiungi almeno 4 giocatori' : '✓ Pronti a iniziare'}
               </p>
             </div>
 
@@ -1612,44 +1612,41 @@ function CreateGameScreen({onStart, onBack}) {
               </div>
             )}
 
-            {/* Role picker — cards full width */}
+            {/* Role picker — grid 4 per fila */}
             <p className="text-gray-600 text-xs uppercase tracking-wider mb-3">Aggiungi ruoli</p>
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-4 gap-2">
               {Object.values(ROLES).map(r => {
                 const vis = ROLE_VISUALS[r.id];
                 const count = roleCount[r.id] || 0;
                 return (
-                  <div key={r.id}>
-                    <button
-                      onClick={()=>addRole(r.id)}
-                      className="w-full flex items-center gap-4 p-4 rounded-2xl text-left transition-all active:scale-[0.98]"
-                      style={{background: vis ? vis.gradient : r.color+'18',
-                              border:`1px solid ${r.color}44`,
-                              boxShadow: count > 0 ? `0 0 16px ${r.color}33` : 'none'}}>
-                      {/* Icona con glow */}
-                      <div className="relative shrink-0">
-                        <span className="text-4xl" style={{filter: vis ? `drop-shadow(0 0 10px ${vis.glow})` : 'none'}}>{r.icon}</span>
-                        {count > 0 && (
-                          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center"
-                                style={{background:r.color, color:'#0d1117'}}>{count}</span>
-                        )}
-                      </div>
-                      {/* Testo */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-bold text-base leading-tight">{r.name}</p>
-                        <p className="text-gray-400 text-xs mt-0.5 line-clamp-2 leading-relaxed">{r.description}</p>
-                        <span className="inline-block text-[10px] px-2 py-0.5 rounded-full mt-1.5"
-                              style={{background:r.color+'22', color:r.color, border:`1px solid ${r.color}44`}}>
-                          {r.team==='lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
-                        </span>
-                      </div>
-                      {/* Plus */}
-                      <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-lg font-bold"
-                           style={{background:r.color+'33', border:`1px solid ${r.color}66`, color:r.color}}>
-                        +
-                      </div>
-                    </button>
-                  </div>
+                  <button key={r.id}
+                    onClick={()=>addRole(r.id)}
+                    className="relative flex flex-col items-center justify-center gap-1 py-3 px-1 rounded-2xl transition-all active:scale-95"
+                    style={{
+                      background: vis ? vis.gradient : r.color+'18',
+                      border: `1px solid ${count > 0 ? r.color+'99' : r.color+'33'}`,
+                      boxShadow: count > 0 ? `0 0 14px ${r.color}44` : 'none',
+                      minHeight: 88
+                    }}>
+                    {/* Badge contatore */}
+                    {count > 0 && (
+                      <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center"
+                            style={{background:r.color, color:'#0d1117'}}>{count}</span>
+                    )}
+                    {/* Icona */}
+                    <span className="text-3xl leading-none"
+                          style={{filter: vis ? `drop-shadow(0 0 8px ${vis.glow})` : 'none'}}>
+                      {r.icon}
+                    </span>
+                    {/* Nome */}
+                    <span className="text-[10px] font-bold text-white text-center leading-tight px-0.5"
+                          style={{wordBreak:'break-word'}}>
+                      {r.name}
+                    </span>
+                    {/* Team dot */}
+                    <span className="w-1.5 h-1.5 rounded-full mt-0.5"
+                          style={{background: r.team==='lupi' ? '#ef4444' : '#4ade80'}} />
+                  </button>
                 );
               })}
             </div>
