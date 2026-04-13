@@ -1443,6 +1443,7 @@ function CreateGameScreen({onStart, onBack}) {
   },[roles]);
 
   const [expandedRole, setExpandedRole] = useState(null);
+  const [previewRole, setPreviewRole] = useState(null);
   const wolfCount = roles.filter(r=>ROLES[r]?.team==='lupi').length;
   const villCount = roles.filter(r=>ROLES[r]?.team==='villaggio').length;
   const balanceVal = (wolfCount * 3.5) - villCount;
@@ -1619,37 +1620,90 @@ function CreateGameScreen({onStart, onBack}) {
                 const vis = ROLE_VISUALS[r.id];
                 const count = roleCount[r.id] || 0;
                 return (
-                  <button key={r.id}
-                    onClick={()=>addRole(r.id)}
-                    className="relative flex flex-col items-center justify-center gap-1 py-3 px-1 rounded-2xl transition-all active:scale-95"
-                    style={{
-                      background: vis ? vis.gradient : r.color+'18',
-                      border: `1px solid ${count > 0 ? r.color+'99' : r.color+'33'}`,
-                      boxShadow: count > 0 ? `0 0 14px ${r.color}44` : 'none',
-                      minHeight: 88
-                    }}>
-                    {/* Badge contatore */}
-                    {count > 0 && (
-                      <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center"
-                            style={{background:r.color, color:'#0d1117'}}>{count}</span>
-                    )}
-                    {/* Icona */}
-                    <span className="text-3xl leading-none"
-                          style={{filter: vis ? `drop-shadow(0 0 8px ${vis.glow})` : 'none'}}>
-                      {r.icon}
-                    </span>
-                    {/* Nome */}
-                    <span className="text-[10px] font-bold text-white text-center leading-tight px-0.5"
-                          style={{wordBreak:'break-word'}}>
-                      {r.name}
-                    </span>
-                    {/* Team dot */}
-                    <span className="w-1.5 h-1.5 rounded-full mt-0.5"
-                          style={{background: r.team==='lupi' ? '#ef4444' : '#4ade80'}} />
-                  </button>
+                  <div key={r.id} className="relative">
+                    <button
+                      onClick={()=>addRole(r.id)}
+                      className="relative w-full flex flex-col items-center justify-center gap-1 py-3 px-1 rounded-2xl transition-all active:scale-95"
+                      style={{
+                        background: vis ? vis.gradient : r.color+'18',
+                        border: `1px solid ${count > 0 ? r.color+'99' : r.color+'33'}`,
+                        boxShadow: count > 0 ? `0 0 14px ${r.color}44` : 'none',
+                        minHeight: 88
+                      }}>
+                      {/* Badge contatore */}
+                      {count > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center"
+                              style={{background:r.color, color:'#0d1117'}}>{count}</span>
+                      )}
+                      {/* Icona */}
+                      <span className="text-3xl leading-none"
+                            style={{filter: vis ? `drop-shadow(0 0 8px ${vis.glow})` : 'none'}}>
+                        {r.icon}
+                      </span>
+                      {/* Nome */}
+                      <span className="text-[10px] font-bold text-white text-center leading-tight px-0.5"
+                            style={{wordBreak:'break-word'}}>
+                        {r.name}
+                      </span>
+                      {/* Team dot */}
+                      <span className="w-1.5 h-1.5 rounded-full mt-0.5"
+                            style={{background: r.team==='lupi' ? '#ef4444' : '#4ade80'}} />
+                    </button>
+                    {/* Info button */}
+                    <button
+                      onClick={e=>{e.stopPropagation(); setPreviewRole(r.id);}}
+                      className="absolute bottom-1.5 left-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold transition-all active:scale-90"
+                      style={{background:'rgba(0,0,0,0.5)', border:`1px solid ${r.color}44`, color:r.color}}>
+                      i
+                    </button>
+                  </div>
                 );
               })}
             </div>
+
+            {/* Modal descrizione ruolo */}
+            {previewRole && (() => {
+              const r = ROLES[previewRole];
+              const vis = ROLE_VISUALS[previewRole];
+              if (!r) return null;
+              return (
+                <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
+                     style={{background:'rgba(0,0,0,0.75)', backdropFilter:'blur(4px)'}}
+                     onClick={()=>setPreviewRole(null)}>
+                  <div className="w-full max-w-sm rounded-2xl p-5 anim-fade-up"
+                       style={{background: vis ? vis.gradient : '#0d1117', border:`1px solid ${r.color}44`}}
+                       onClick={e=>e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-4xl" style={{filter: vis ? `drop-shadow(0 0 12px ${vis.glow})` : 'none'}}>{r.icon}</span>
+                        <div>
+                          <p className="font-cinzel text-white font-bold text-lg leading-tight">{r.name}</p>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full"
+                                style={{background:r.color+'33', border:`1px solid ${r.color}55`, color:r.color}}>
+                            {r.team==='lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
+                          </span>
+                        </div>
+                      </div>
+                      <button onClick={()=>setPreviewRole(null)}
+                              className="text-gray-500 hover:text-white text-xl leading-none px-1">✕</button>
+                    </div>
+                    <p className="text-gray-300 text-sm leading-relaxed mb-3">{r.description}</p>
+                    {r.tip && (
+                      <div className="p-3 rounded-xl text-xs text-white/50 italic mb-4"
+                           style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)'}}>
+                        💡 {r.tip}
+                      </div>
+                    )}
+                    <button
+                      onClick={()=>{ addRole(r.id); setPreviewRole(null); }}
+                      className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+                      style={{background:r.color+'33', border:`1px solid ${r.color}66`, color:'white'}}>
+                      + Aggiungi {r.name}
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         )}
