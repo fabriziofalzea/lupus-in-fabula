@@ -536,16 +536,6 @@ const ROLES = {
     description:'La prima notte sceglie segretamente un giocatore da imitare. Per tutta la partita la Veggente lo vede come quel ruolo. Vince con il villaggio.',
     tip:'Imita un lupo per sviare la Veggente — ma attento a non farti smascherare di giorno.'
   },
-  criceto: {
-    id:'criceto', name:'Criceto Mannaro', team:'terza', color:'#ff9800', icon:'🐹',
-    abbr:'Cr',
-    category:'terza', wakeOrder:null, nightAction:false,
-    description:'Sei la terza fazione. I lupi non possono ucciderti di notte (sei immune). Se la Veggente ti indica, muori in silenzio. Vinci da solo: sopravvivi fino alla fine della partita.',
-    tip:'Fingiti un villico qualunque. I lupi ti ignoreranno, ma la Veggente è il tuo nemico mortale.',
-    immuneToWolves: true,
-    diesFromVeggente: true,
-    veggenteSees: 'lupi'
-  },
   figlio_dei_lupi: {
     id:'figlio_dei_lupi', name:'Figlio dei Lupi', team:'villaggio', color:'#78350f', icon:'🐺',
     abbr:'Fl',
@@ -576,7 +566,6 @@ const ROLE_VISUALS = {
   guardia:        { gradient:'linear-gradient(145deg,#001020,#003555,#001830)', glow:'#0ea5e9', particle:'🛡️' },
   strega:         { gradient:'linear-gradient(145deg,#001a05,#004015,#051800)', glow:'#16a34a', particle:'🌿' },
   figlio_dei_lupi:{ gradient:'linear-gradient(145deg,#1a0d00,#3d2200,#1a1200)', glow:'#b45309', particle:'🍂' },
-  criceto:        { gradient:'linear-gradient(145deg,#1a0800,#3a1200,#1a0500)', glow:'#f97316', particle:'⚡' },
   sciamano:       { gradient:'linear-gradient(145deg,#001a1a,#003838,#001a2a)', glow:'#06b6d4', particle:'🌀' },
   cupido:         { gradient:'linear-gradient(145deg,#1a0012,#450030,#1a001a)', glow:'#ec4899', particle:'💫' },
   sindaco:        { gradient:'linear-gradient(145deg,#1a1400,#3d2d00,#1a0e00)', glow:'#eab308', particle:'👁️'  },
@@ -637,16 +626,8 @@ function checkWin(players) {
   const alive = Object.values(players).filter(p => p.alive);
   const wolves = alive.filter(p => ROLES[p.role]?.team === 'lupi');
   const villagers = alive.filter(p => ROLES[p.role]?.team === 'villaggio');
-  const thirds = alive.filter(p => ROLES[p.role]?.team === 'terza');
 
-  // Criceto vince solo se è l'unico sopravvissuto
-  if (alive.length === 1 && thirds.length === 1) return 'terza';
-
-  // Vittoria lupi: uguaglianza o superiorità rispetto al villaggio (criceto non conta)
-  if (wolves.length === 0) {
-    if (thirds.length > 0) return null; // criceto ancora in gioco, continua
-    return 'villaggio';
-  }
+  if (wolves.length === 0) return 'villaggio';
   if (wolves.length >= villagers.length) return 'lupi';
   return null;
 }
@@ -1009,7 +990,7 @@ function RoleCard({role, playerName, flipped, onFlip, userPhoto}) {
               <p className="font-cinzel text-white text-2xl font-bold tracking-wide">{r.name}</p>
               <span className="text-[11px] px-3 py-1 rounded-full font-bold"
                     style={{background:r.color+'33', border:`1px solid ${r.color}66`, color:r.color}}>
-                {r.team==='lupi'?'⚔️ Lupi':r.team==='terza'?'🐹 Terza Fazione':'🌾 Villaggio'}
+                {r.team==='lupi'?'⚔️ Lupi':'🌾 Villaggio'}
               </span>
             </div>
 
@@ -1140,47 +1121,47 @@ function TutorialModal({ isOpen, onClose }) {
   const [currentStep, setCurrentStep] = useState(0);
 
   const steps = [
-    {
-      title: "Benvenuto a Lupus in Fabula",
-      content: "Lupus in Fabula è un gioco di deduzione sociale e inganno. C'è un Narratore che controlla il gioco e dei Giocatori che cercano di scoprire l'identità dei lupi mannari.",
-      icon: "🐺"
-    },
-    {
-      title: "Le tre fazioni",
-      content: "Nel gioco ci sono tre fazioni: i Lupi (🐺) che attaccano di notte, il Villaggio (🌾) che elimina chi sospetta di giorno, e la Terza Fazione (🐹) con obiettivi segreti.",
-      icon: "⚔️"
-    },
-    {
-      title: "La notte del narratore",
-      content: "Alla notte, il Narratore fa chiudere gli occhi a tutti. I ruoli speciali si svegliano uno alla volta e agiscono silenziosamente dal proprio telefono: il Veggente scopre chi è lupo, la Guardia protegge, la Strega usa pozioni.",
-      icon: "🌙"
-    },
-    {
-      title: "L'alba - Le vittime rivelate",
-      content: "Il Narratore annuncia chi è stato eliminato dai lupi durante la notte (o se nessuno è morto per miracolo). Ogni vittima rivela il suo ruolo e scompare dal gioco.",
-      icon: "☀️"
-    },
-    {
-      title: "Il giorno - Discussione e dibattito",
-      content: "Tutti discutono e cercano di capire chi sono i lupi. Il timer scorre inesorabile. Puoi accusare qualcuno, difenderti, cercare contraddizioni nelle storie. Osserva chi è strano, chi si contraddice.",
-      icon: "💬"
-    },
-    {
-      title: "La votazione",
-      content: "Quando il tempo finisce, il villaggio vota per eliminare chi sospetta di essere un lupo. Chi riceve più voti viene eliminato e rivela il suo ruolo a tutti. Se era un lupo, bene. Se era un villico, il gioco diventa più difficile.",
-      icon: "🗳️"
-    },
-    {
-      title: "Come si vince",
-      content: "Il Villaggio vince eliminando tutti i lupi. I Lupi vincono quando diventano tanti quanti i villici rimasti. La Terza Fazione ha un obiettivo segreto tutto suo e vince quando lo completa.",
-      icon: "🏆"
-    },
-    {
-      title: "Come iniziare una partita",
-      content: "Il Narratore crea la partita, sceglie i giocatori e assegna i ruoli. Poi scansiona i QR code con i giocatori. Ogni giocatore tocca il proprio schermo per scoprire il ruolo segreto. La partita inizia!",
-      icon: "🎮"
-    }
-  ];
+  {
+    title: "Benvenuto a Lupus in Fabula",
+    content: "Un villaggio di notte. Qualcuno tra voi non è quello che sembra. Lupus in Fabula è un gioco di inganno, deduzione e bluff: scopri i lupi prima che sia troppo tardi.",
+    icon: "🐺"
+  },
+  {
+    title: "Le due fazioni",
+    content: "Lupi 🐺: attaccano di notte e mentono di giorno. Villaggio 🌾: deve scoprirli e votarli fuori.",
+    icon: "⚔️"
+  },
+  {
+    title: "La notte",
+    content: "Di notte il villaggio dorme. I ruoli speciali si attivano in silenzio uno per volta: ogni scelta conta, ogni errore può costare una vita.",
+    icon: "🌙"
+  },
+  {
+    title: "L'alba",
+    content: "All'alba si conta chi manca. Il Narratore annuncia le vittime della notte — e ogni rivelazione cambia i sospetti, le alleanze, il gioco.",
+    icon: "☀️"
+  },
+  {
+    title: "Il giorno - Discussione e dibattito",
+    content: "Il villaggio discute. Puoi dire la verità, bluffare, seminare dubbi. La conversazione è la tua arma principale — usala bene prima che il tempo scada.",
+    icon: "💬"
+  },
+  {
+    title: "La votazione",
+    content: "Quando il dibattito finisce, si decide. Ogni giocatore vota in silenzio dal telefono. Il più votato cade — e rivela finalmente chi era davvero.",
+    icon: "🗳️"
+  },
+  {
+    title: "Come si vince",
+    content: "Il Villaggio vince eliminando tutti i Lupi. I Lupi vincono quando sono tanti quanto i villici rimasti.",
+    icon: "🏆"
+  },
+  {
+    title: "Come iniziare una partita",
+    content: "Il Narratore crea la partita e sceglie i ruoli. Ogni giocatore scansiona il QR con il telefono, tocca lo schermo per scoprire il proprio ruolo segreto. Poi si spegne la luce.",
+    icon: "🎮"
+  }
+];
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -1383,7 +1364,6 @@ function CreateGameScreen({onStart, onBack}) {
   const [expandedRole, setExpandedRole] = useState(null);
   const wolfCount = roles.filter(r=>ROLES[r]?.team==='lupi').length;
   const villCount = roles.filter(r=>ROLES[r]?.team==='villaggio').length;
-  const thirdCount = roles.filter(r=>ROLES[r]?.team==='terza').length;
   const balanceVal = (wolfCount * 3.5) - villCount;
   let balanceMsg = null;
   if (roles.length >= 4) {
@@ -1514,11 +1494,6 @@ function CreateGameScreen({onStart, onBack}) {
               </div>
             </div>
 
-            {thirdCount > 0 && (
-              <div className="text-center text-xs text-orange-400 mb-2">
-                🐹 {thirdCount} Terza Fazione in gioco
-              </div>
-            )}
             {balanceMsg && (
               <div className={`text-center text-xs font-bold mb-3 ${balanceMsg.color}`}>
                 ⚠️ {balanceMsg.text}
@@ -1575,7 +1550,7 @@ function CreateGameScreen({onStart, onBack}) {
                       <p className="text-white text-sm font-bold leading-tight">{r.name}</p>
                       <span className="inline-block text-[10px] px-1.5 py-0.5 rounded-full mt-1"
                             style={{background:r.color+'22', color:r.color, border:`1px solid ${r.color}44`}}>
-                        {r.team==='lupi'?'Lupi':r.team==='terza'?'Terza':'Villaggio'}
+                        {r.team==='lupi'?'Lupi':'Villaggio'}
                       </span>
                       <p className="text-gray-600 text-[9px] mt-1.5">Tocca per aggiungere</p>
                     </button>
@@ -1809,8 +1784,6 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
     if(w) {
       const endMsg = w==='lupi'
         ? 'Il villaggio è caduto. I lupi escono dall\'ombra, il loro ululato riecheggia nella notte. Il branco ha trionfato.'
-        : w==='terza'
-        ? 'Nell\'ombra, silenzioso, il Criceto Mannaro ha aspettato. Tutti sono caduti. Solo lui è rimasto. La vittoria più silenziosa.'
         : 'Ultimo lupo svelato. Il villaggio esulta — la pace torna tra le case, le porte si riaprono, le candele si riaccendono.';
       setWinner(w);
       setNarrationAndPhase('ended', endMsg);
@@ -1826,7 +1799,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
       const w2 = checkWin(newStates);
       if(w2 && !w) {
         setPStates(newStates);
-        const endMsg2 = w2==='lupi' ? 'Il branco ha trionfato. Il villaggio è caduto.' : w2==='terza' ? 'Il Criceto Mannaro ha vinto. La vittoria più silenziosa.' : 'Il villaggio ha vinto. La pace è tornata.';
+        const endMsg2 = w2==='lupi' ? 'Il branco ha trionfato. Il villaggio è caduto.' : 'Il villaggio ha vinto. La pace è tornata.';
         setWinner(w2); setNarrationAndPhase('ended', endMsg2); fbUpdate({winner:w2, phase:'ended'});
         return w2;
       }
@@ -2351,7 +2324,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
                   {[...new Set(players.map(p=>p.role))].map(roleId=>{
                     const r = ROLES[roleId];
                     if(!r) return null;
-                    const teamColor = r.team==='lupi'?'#c0392b':r.team==='terza'?'#ff9800':'#27ae60';
+                    const teamColor = r.team==='lupi'?'#c0392b':'#27ae60';
                     return (
                       <div key={roleId} className="glass rounded-xl px-4 py-3 flex gap-3 items-start"
                            style={{borderLeft:`3px solid ${teamColor}`}}>
@@ -2361,7 +2334,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
                             <span className="font-cinzel font-bold text-white text-sm">{r.name}</span>
                             <span className="text-xs px-1.5 py-0.5 rounded-full"
                                   style={{background:`${teamColor}22`,color:teamColor,border:`1px solid ${teamColor}44`}}>
-                              {r.team==='lupi'?'Lupi':r.team==='terza'?'Terza Fazione':'Villaggio'}
+                              {r.team==='lupi'?'Lupi':'Villaggio'}
                             </span>
                           </div>
                           <p className="text-gray-400 text-xs leading-relaxed">{r.description}</p>
@@ -2415,7 +2388,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
                   {[...new Set(players.map(p=>p.role))].map(roleId=>{
                     const r = ROLES[roleId];
                     if(!r) return null;
-                    const teamColor = r.team==='lupi'?'#c0392b':r.team==='terza'?'#ff9800':'#27ae60';
+                    const teamColor = r.team==='lupi'?'#c0392b':'#27ae60';
                     return (
                       <div key={roleId} className="glass rounded-xl px-4 py-3 flex gap-3 items-start"
                            style={{borderLeft:`3px solid ${teamColor}`}}>
@@ -2425,7 +2398,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
                             <span className="font-cinzel font-bold text-white text-sm">{r.name}</span>
                             <span className="text-xs px-1.5 py-0.5 rounded-full"
                                   style={{background:`${teamColor}22`,color:teamColor,border:`1px solid ${teamColor}44`}}>
-                              {r.team==='lupi'?'Lupi':r.team==='terza'?'Terza Fazione':'Villaggio'}
+                              {r.team==='lupi'?'Lupi':'Villaggio'}
                             </span>
                           </div>
                           <p className="text-gray-400 text-xs leading-relaxed">{r.description}</p>
@@ -2510,7 +2483,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
                                 ? pStates[mitomaneTarget]?.role
                                 : target.role;
                               const realTeam = ROLES[realRoleId]?.team;
-                              teamHint = realTeam === 'lupi' ? '🐺 Lupo!' : realTeam === 'terza' ? '🐹 Terza' : '🌾 Villaggio';
+                              teamHint = realTeam === 'lupi' ? '🐺 Lupo!' : '🌾 Villaggio';
                             }
                             return (
                               <div key={vid} className="flex justify-between items-center text-xs">
@@ -2672,10 +2645,10 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
             {/* Titolo vincitore */}
             <div className="text-center mb-5">
               <div className="text-6xl mb-3" style={{filter:'drop-shadow(0 0 20px gold)'}}>
-                {winner==='lupi'?'🐺':winner==='terza'?'🐹':'🌾'}
+                {winner==='lupi'?'🐺':'🌾'}
               </div>
               <h3 className="font-cinzel text-2xl font-bold text-moon mb-1 win-glow">
-                {winner==='lupi'?'Hanno vinto i Lupi!':winner==='terza'?'Ha vinto il Criceto Mannaro!':'Ha vinto il Villaggio!'}
+                {winner==='lupi'?'Hanno vinto i Lupi!':'Ha vinto il Villaggio!'}
               </h3>
               <p className="text-gray-500 text-sm">Partita #{gameId} · Giorno {dayNum}</p>
             </div>
@@ -2690,8 +2663,6 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
 
               const winReason = winner==='lupi'
                 ? `I lupi (${wolves.map(p=>p.name).join(', ')}) sono riusciti a eguagliare o superare i villici in vita. Il villaggio non ha saputo fermarli in tempo.`
-                : winner==='terza'
-                ? `Il Criceto Mannaro (${allPlayers.find(p=>p.role==='criceto')?.name || '?'}) è sopravvissuto fino alla fine, outlastando tutti. Una vittoria silenziosa.`
                 : wolves.length===0
                 ? `Tutti i lupi sono stati scoperti ed eliminati dal villaggio. ${wolves.map(p=>p.name).join(', ') || 'Il branco'} è caduto.`
                 : 'Il villaggio ha vinto.';
@@ -3070,7 +3041,7 @@ function PlayerScreen({gameId, playerId}) {
             </div>
             <span className="text-[11px] px-3 py-1 rounded-full font-bold"
                   style={{background:role.color+'33', border:`1px solid ${role.color}66`, color:role.color}}>
-              {role.team==='lupi'?'⚔️ Lupi':role.team==='terza'?'🐹 Terza Fazione':'🌾 Villaggio'}
+              {role.team==='lupi'?'⚔️ Lupi':'🌾 Villaggio'}
             </span>
             <p className="text-gray-300 text-sm leading-relaxed mt-4">{role.description}</p>
             {role.tip && (
@@ -3375,19 +3346,16 @@ function PlayerScreen({gameId, playerId}) {
                   {/* ── VEGGENTE: rivela l'allineamento dopo il voto ── */}
                   {player.role === 'veggente' && localVote && (() => {
                     const targetRole = gameData.players?.[localVote]?.role;
-                    // Criceto appare come LUPO alla Veggente (e morirà di conseguenza)
-                    const isCriceto = targetRole === 'criceto';
-                    const isWolf = ROLES[targetRole]?.team === 'lupi' || (ROLES[targetRole]?.veggenteSees === 'lupi');
+                    const isWolf = ROLES[targetRole]?.team === 'lupi';
                     return (
                       <div className="mt-4 p-4 rounded-2xl text-center anim-fade-in"
                            style={{background: isWolf ? 'rgba(139,26,26,0.35)' : 'rgba(26,74,26,0.35)',
                                    border: `2px solid ${isWolf ? 'rgba(239,68,68,0.6)' : 'rgba(74,222,128,0.6)'}`}}>
-                        <p className="text-4xl mb-1">{isWolf ? (isCriceto ? '🐹' : '🐺') : '✨'}</p>
+                        <p className="text-4xl mb-1">{isWolf ? '🐺' : '✨'}</p>
                         <p className="font-cinzel text-white font-bold text-lg">
                           {isWolf ? 'È un LUPO!' : 'È innocente'}
                         </p>
-                        {isCriceto && <p className="text-orange-400 text-xs mt-1 font-bold">⚠️ Questa rivelazione lo eliminerà all'alba</p>}
-                        {!isCriceto && <p className="text-gray-400 text-xs mt-1">Solo tu puoi vedere questa rivelazione</p>}
+                        <p className="text-gray-400 text-xs mt-1">Solo tu puoi vedere questa rivelazione</p>
                       </div>
                     );
                   })()}
@@ -3431,9 +3399,9 @@ function PlayerScreen({gameId, playerId}) {
         <div className="py-6 anim-fade-up">
           {/* Intestazione */}
           <div className="text-center mb-5">
-            <div className="text-6xl mb-3">{gameData.winner==='lupi'?'🐺':gameData.winner==='terza'?'🐹':'🌾'}</div>
+            <div className="text-6xl mb-3">{gameData.winner==='lupi'?'🐺':'🌾'}</div>
             <p className="font-cinzel text-moon text-2xl font-bold mb-1">
-              {gameData.winner==='lupi'?'Hanno vinto i Lupi!':gameData.winner==='terza'?'Ha vinto il Criceto Mannaro!':'Ha vinto il Villaggio!'}
+              {gameData.winner==='lupi'?'Hanno vinto i Lupi!':'Ha vinto il Villaggio!'}
             </p>
             <p className="text-gray-500 text-sm">Partita terminata</p>
           </div>
@@ -3445,7 +3413,7 @@ function PlayerScreen({gameId, playerId}) {
             <p className="font-cinzel text-white text-xl mb-1">{role?.icon} {role?.name}</p>
             <div className="flex items-center gap-2">
               <span className="text-xs px-2 py-0.5 rounded-full" style={{background:role?.color+'22',border:`1px solid ${role?.color}44`,color:role?.color}}>
-                {role?.team==='lupi'?'⚔️ Lupi':role?.team==='terza'?'🐹 Terza Fazione':'🌾 Villaggio'}
+                {role?.team==='lupi'?'⚔️ Lupi':'🌾 Villaggio'}
               </span>
               <span className={`text-xs font-bold ${player?.alive?'text-green-400':'text-red-400'}`}>
                 {player?.alive ? '✓ Sopravvissuto/a' : '💀 Eliminato/a'}
@@ -3496,7 +3464,7 @@ function PlayerScreen({gameId, playerId}) {
               return roleIds.map(rid=>{
                 const r = ROLES[rid];
                 if(!r) return null;
-                const teamColor = r.team==='lupi'?'#c0392b':r.team==='terza'?'#ff9800':'#27ae60';
+                const teamColor = r.team==='lupi'?'#c0392b':'#27ae60';
                 const isMyRole = rid === player?.role;
                 return (
                   <div key={rid} className="flex gap-3 items-start px-3 py-2.5 rounded-xl mb-1"
@@ -3510,7 +3478,7 @@ function PlayerScreen({gameId, playerId}) {
                                           style={{background:r.color+'33',color:r.color}}>tu</span>}
                         <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto"
                               style={{background:`${teamColor}18`,color:teamColor,border:`1px solid ${teamColor}33`}}>
-                          {r.team==='lupi'?'Lupi':r.team==='terza'?'Terza':'Villaggio'}
+                          {r.team==='lupi'?'Lupi':'Villaggio'}
                         </span>
                       </div>
                       <p className="text-gray-500 text-[11px] leading-relaxed">{r.description}</p>
@@ -3529,7 +3497,7 @@ function PlayerScreen({gameId, playerId}) {
       )}
 
       {/* Tutorial modal */}
-      {showTutorial && <TutorialModal onClose={()=>setShowTutorial(false)} />}
+      {showTutorial && <TutorialModal isOpen={true} onClose={()=>setShowTutorial(false)} />}
 
       {/* Bottoni info — sempre visibili nella schermata giocatore */}
       {phase !== 'ended' && (
