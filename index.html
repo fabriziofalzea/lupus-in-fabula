@@ -239,6 +239,43 @@
     .role-icon-glow { animation: roleIconGlow 2.8s ease-in-out infinite; }
     .role-particle  { position: absolute; animation: roleParticleFloat 5s ease-in-out infinite; pointer-events: none; }
     .role-bg-shimmer { animation: roleBgShimmer 4s ease-in-out infinite; }
+
+    /* ---- Home screen ---- */
+    @keyframes moonFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes ringExpand {
+      0% { transform: scale(0.85); opacity: 0.5; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+    @keyframes goldShimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes nebulaDrift {
+      0%, 100% { opacity: 0.6; transform: scale(1) translateY(0); }
+      50% { opacity: 1; transform: scale(1.05) translateY(-10px); }
+    }
+    .moon-float { animation: moonFloat 5s ease-in-out infinite; }
+    .ring-expand { animation: ringExpand 3s ease-out infinite; }
+    .home-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(226,201,126,0.35) 50%, transparent 100%);
+    }
+    .btn-gold-shimmer {
+      background: linear-gradient(100deg, #7a5c0e 0%, #c4931a 30%, #f0c84a 50%, #c4931a 70%, #7a5c0e 100%);
+      background-size: 300% 100%;
+      animation: goldShimmer 4s linear infinite;
+      color: #0d1117;
+      font-family: 'Cinzel', serif;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 24px rgba(196,147,26,0.4);
+      transition: transform 0.15s, box-shadow 0.3s;
+    }
+    .btn-gold-shimmer:active { transform: scale(0.98); }
   </style>
 
   <script>
@@ -1273,49 +1310,93 @@ function HomeScreen({onCreateGame, onViewHistory, onSetup}) {
   const [showTutorial, setShowTutorial] = useState(false);
 
   return (
-    <div className="min-h-screen layer flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen layer flex flex-col items-center justify-center p-6 relative overflow-hidden">
+
+      {/* Nebula glow di sfondo */}
+      <div style={{
+        position:'fixed', top:'10%', left:'50%', transform:'translateX(-50%)',
+        width:340, height:340, borderRadius:'50%', pointerEvents:'none', zIndex:0,
+        background:'radial-gradient(ellipse, rgba(226,201,126,0.05) 0%, transparent 70%)',
+        animation:'nebulaDrift 8s ease-in-out infinite'
+      }} />
+
       <UserProfile />
-      <div className="anim-fade-up text-center w-full max-w-sm">
-        <Moon size={80}/>
-        <h1 className="font-cinzel text-4xl font-bold moon-glow mt-4 mb-2 leading-tight">
+
+      <div className="anim-fade-up text-center w-full max-w-sm relative z-10">
+
+        {/* Luna con anelli */}
+        <div className="relative inline-flex items-center justify-center mb-6" style={{width:120, height:120}}>
+          {/* Anelli che si espandono */}
+          <div style={{
+            position:'absolute', width:120, height:120, borderRadius:'50%',
+            border:'1px solid rgba(226,201,126,0.25)',
+            animation:'ringExpand 3s ease-out infinite'
+          }} />
+          <div style={{
+            position:'absolute', width:120, height:120, borderRadius:'50%',
+            border:'1px solid rgba(226,201,126,0.15)',
+            animation:'ringExpand 3s ease-out infinite 1s'
+          }} />
+          <div style={{
+            position:'absolute', width:120, height:120, borderRadius:'50%',
+            border:'1px solid rgba(226,201,126,0.08)',
+            animation:'ringExpand 3s ease-out infinite 2s'
+          }} />
+          {/* Luna fluttuante */}
+          <div className="moon-float">
+            <Moon size={72}/>
+          </div>
+        </div>
+
+        {/* Titolo */}
+        <h1 className="font-cinzel text-5xl font-bold moon-glow mb-1 leading-tight tracking-wide">
           Lupus<br/>in Fabula
         </h1>
-        <p className="text-gray-500 mb-10 text-base">Il gioco del lupo mannaro</p>
+        <p className="text-xs tracking-[0.3em] uppercase mb-8" style={{color:'rgba(226,201,126,0.4)'}}>
+          ✦ &nbsp;il gioco del lupo mannaro&nbsp; ✦
+        </p>
 
+        {/* Divisore dorato */}
+        <div className="home-divider mb-8" />
+
+        {/* Bottoni */}
         <div className="flex flex-col gap-3">
           <button onClick={onCreateGame}
-            className="btn-gold w-full py-4 rounded-2xl text-base">
-            🎮 Crea Nuova Partita
+            className="btn-gold-shimmer w-full py-4 rounded-2xl text-base">
+            🎮 &nbsp;Crea Nuova Partita
           </button>
           <button onClick={onViewHistory}
             className="btn-ghost w-full py-4 rounded-2xl text-base">
-            📜 Storico Partite
+            📜 &nbsp;Storico Partite
           </button>
         </div>
 
-        {/* Tutorial button — prominente */}
+        {/* Come si gioca */}
         <button onClick={() => setShowTutorial(true)}
           className="w-full py-3 rounded-2xl mt-3 flex items-center justify-center gap-2 transition-all active:scale-95"
-          style={{background:'rgba(226,201,126,0.06)', border:'1px solid rgba(226,201,126,0.18)', color:'#e2c97e'}}>
-          <span className="text-base">📖</span>
-          <span className="text-sm font-semibold">Come si gioca</span>
+          style={{background:'rgba(226,201,126,0.05)', border:'1px solid rgba(226,201,126,0.15)', color:'rgba(226,201,126,0.7)'}}>
+          <span className="text-sm">📖</span>
+          <span className="text-sm font-semibold tracking-wide">Come si gioca</span>
         </button>
 
-        <div className="flex gap-2 justify-center mt-4">
+        {/* Divisore basso */}
+        <div className="home-divider mt-8 mb-4" />
+
+        <div className="flex justify-center">
           <button onClick={onSetup}
-            className="text-gray-600 text-xs hover:text-gray-400 transition-colors underline">
+            className="text-gray-700 text-xs hover:text-gray-500 transition-colors">
             ⚙️ Configura Firebase
           </button>
         </div>
 
         {!isFirebaseConfigured() && (
-          <div className="mt-3 px-3 py-2 rounded-xl text-xs text-yellow-600"
-               style={{background:'rgba(234,179,8,0.08)', border:'1px solid rgba(234,179,8,0.15)'}}>
-            ⚠️ Firebase non configurato — i QR code funzioneranno solo in modalità demo
+          <div className="mt-3 px-3 py-2 rounded-xl text-xs text-yellow-700"
+               style={{background:'rgba(234,179,8,0.06)', border:'1px solid rgba(234,179,8,0.12)'}}>
+            ⚠️ Firebase non configurato — modalità demo attiva
           </div>
         )}
 
-        <p className="text-gray-700 text-xs mt-10">v1.0 · Un viaggio nella notte</p>
+        <p className="text-xs mt-6 tracking-widest" style={{color:'rgba(226,201,126,0.2)'}}>— un viaggio nella notte —</p>
       </div>
 
       <TutorialModal isOpen={showTutorial} onClose={() => setShowTutorial(false)} />
