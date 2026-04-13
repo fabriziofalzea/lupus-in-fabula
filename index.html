@@ -2911,6 +2911,7 @@ function PlayerScreen({gameId, playerId}) {
   const [error, setError] = useState(null);
   const [showRoleInfo, setShowRoleInfo] = useState(false);
   const [showRolesInGame, setShowRolesInGame] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Helper per log visibile (debug)
   const contextLog = (msg) => {
@@ -3039,54 +3040,6 @@ function PlayerScreen({gameId, playerId}) {
         {phaseDisplay.tip && <p className="text-gray-600 text-xs mt-1">{phaseDisplay.tip}</p>}
       </div>
 
-      {/* Ruoli in partita — pannello collassabile per tutti i giocatori */}
-      {phase !== 'ended' && gameData?.players && (
-        <div className="mb-4">
-          <button
-            onClick={()=>setShowRolesInGame(v=>!v)}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-            style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
-            <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">📜 Ruoli in questa partita</span>
-            <span style={{fontSize:'0.75rem', transition:'transform 0.25s', display:'inline-block',
-                          transform: showRolesInGame?'rotate(180deg)':'rotate(0deg)', color:'#6b7280'}}>▾</span>
-          </button>
-
-          {showRolesInGame && (()=>{
-            const roleIds = [...new Set(Object.values(gameData.players).map(p=>p.role))];
-            return (
-              <div className="mt-1.5 rounded-xl overflow-hidden anim-fade-in"
-                   style={{border:'1px solid rgba(255,255,255,0.06)'}}>
-                {roleIds.map(rid=>{
-                  const r = ROLES[rid];
-                  if(!r) return null;
-                  const teamColor = r.team==='lupi'?'#c0392b':r.team==='terza'?'#ff9800':'#27ae60';
-                  const isMyRole = rid === player?.role;
-                  return (
-                    <div key={rid} className="flex gap-3 items-start px-3 py-2.5"
-                         style={{background: isMyRole ? r.color+'18' : 'transparent',
-                                 borderLeft: isMyRole ? `3px solid ${r.color}` : '3px solid transparent',
-                                 borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
-                      <span className="text-xl shrink-0 mt-0.5">{r.icon}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-white text-sm font-bold">{r.name}</span>
-                          {isMyRole && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                                            style={{background:r.color+'33',color:r.color}}>tu</span>}
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto"
-                                style={{background:`${teamColor}18`,color:teamColor,border:`1px solid ${teamColor}33`}}>
-                            {r.team==='lupi'?'Lupi':r.team==='terza'?'Terza':'Villaggio'}
-                          </span>
-                        </div>
-                        <p className="text-gray-500 text-[11px] leading-relaxed">{r.description}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </div>
-      )}
 
       {/* Role reveal */}
       {(phase==='role_reveal' || phase==='waiting') && (
@@ -3522,6 +3475,77 @@ function PlayerScreen({gameId, playerId}) {
               })}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Modale ruoli in gioco */}
+      {showRolesInGame && gameData?.players && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
+             style={{background:'rgba(0,0,0,0.75)', backdropFilter:'blur(4px)'}}
+             onClick={()=>setShowRolesInGame(false)}>
+          <div className="w-full max-w-sm rounded-2xl p-5 anim-fade-up"
+               style={{background:'#0d1117', border:'1px solid rgba(255,255,255,0.1)', maxHeight:'80vh', overflowY:'auto'}}
+               onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-white font-cinzel font-bold">📜 Ruoli in questa partita</span>
+              <button onClick={()=>setShowRolesInGame(false)}
+                      className="text-gray-500 hover:text-white text-xl leading-none px-1">✕</button>
+            </div>
+            {(()=>{
+              const roleIds = [...new Set(Object.values(gameData.players).map(p=>p.role))];
+              return roleIds.map(rid=>{
+                const r = ROLES[rid];
+                if(!r) return null;
+                const teamColor = r.team==='lupi'?'#c0392b':r.team==='terza'?'#ff9800':'#27ae60';
+                const isMyRole = rid === player?.role;
+                return (
+                  <div key={rid} className="flex gap-3 items-start px-3 py-2.5 rounded-xl mb-1"
+                       style={{background: isMyRole ? r.color+'18' : 'rgba(255,255,255,0.03)',
+                               border: isMyRole ? `1px solid ${r.color}44` : '1px solid rgba(255,255,255,0.05)'}}>
+                    <span className="text-xl shrink-0 mt-0.5">{r.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-white text-sm font-bold">{r.name}</span>
+                        {isMyRole && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                          style={{background:r.color+'33',color:r.color}}>tu</span>}
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto"
+                              style={{background:`${teamColor}18`,color:teamColor,border:`1px solid ${teamColor}33`}}>
+                          {r.team==='lupi'?'Lupi':r.team==='terza'?'Terza':'Villaggio'}
+                        </span>
+                      </div>
+                      <p className="text-gray-500 text-[11px] leading-relaxed">{r.description}</p>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+            <button onClick={()=>setShowRolesInGame(false)}
+                    className="w-full mt-4 py-3 rounded-xl text-sm font-bold text-gray-400"
+                    style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)'}}>
+              Chiudi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tutorial modal */}
+      {showTutorial && <TutorialModal onClose={()=>setShowTutorial(false)} />}
+
+      {/* Bottoni info — sempre visibili nella schermata giocatore */}
+      {phase !== 'ended' && (
+        <div className="flex gap-2 mt-4 mb-2">
+          <button
+            onClick={()=>setShowRolesInGame(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-gray-400 transition-all active:scale-95"
+            style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
+            📜 Ruoli in gioco
+          </button>
+          <button
+            onClick={()=>setShowTutorial(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-gray-400 transition-all active:scale-95"
+            style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
+            📖 Come si gioca
+          </button>
         </div>
       )}
 
