@@ -735,7 +735,7 @@ function UserProfile() {
     const isNative = !!(window.Capacitor?.isNativePlatform?.());
     if (isNative) {
       // Google Sign-In non funziona in WKWebView senza plugin nativi — mostra messaggio chiaro
-      setAuthError("Google Sign-In non è disponibile nell'app iOS. Usa accesso con email e password.");
+      setAuthError("Google Sign-In non è disponibile nell'app iOS — lo abiliteremo presto. Per ora usa accesso con email e password.");
       return;
     }
     auth.signInWithPopup(provider)
