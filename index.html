@@ -358,20 +358,15 @@ window.speakNarration = (text) => {
 
   const mode = localStorage.getItem('lif_tts_mode') || 'script';
 
-  // ── Modalità script: solo testo a schermo, nessun audio ──
-  if (mode === 'script') {
+  // ── Qualsiasi modalità tranne 'voice' = script: solo testo, nessun audio ──
+  // Questo include 'script', 'browser', 'elevenlabs' (legacy) e qualsiasi valore sconosciuto.
+  if (mode !== 'voice') {
     window.dispatchEvent(new Event('narrator_start'));
     setTimeout(() => window.dispatchEvent(new Event('narrator_end')), 200);
     return;
   }
 
-  // ── Modalità browser (legacy) ──
-  if (mode === 'browser') {
-    window.dispatchEvent(new Event('narrator_start'));
-    window._speakBrowser(text);
-    return;
-  }
-
+  // ── Modalità voce AI (ElevenLabs) ──
   const cfg    = window.getELConfig();
   const voiceId = cfg.voice === 'custom' ? cfg.customVoice : cfg.voice;
 
@@ -394,21 +389,20 @@ window.speakNarration = (text) => {
         body: JSON.stringify({
           text,
           model_id: 'eleven_multilingual_v2',
-          speed: 1.4, // 40% più veloce (1.0 = normale, range 0.25–4.0)
+          speed: 1.4,
           voice_settings: { stability: 0.70, similarity_boost: 0.85, style: 0.35, use_speaker_boost: true },
         }),
       })
       .then(r => { if (!r.ok) throw new Error('EL ' + r.status); return r.blob(); })
       .then(blob => window._playAudioBlob(blob))
       .catch(err => {
-        console.warn('ElevenLabs diretto fallito, uso browser TTS:', err);
+        console.warn('ElevenLabs diretto fallito:', err);
         window.dispatchEvent(new Event('narrator_end'));
-        window._speakBrowser(text);
+        // Nessun fallback audio — l'utente legge lo script a schermo
       });
     } else {
-      // ── 3. Fallback finale: browser TTS ──
+      // ── Nessuna key configurata — silenzio ──
       window.dispatchEvent(new Event('narrator_end'));
-      window._speakBrowser(text);
     }
   });
 };
@@ -1802,7 +1796,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   const [votePrompt, setVotePrompt] = useState(false); // sollecito votazione
 
   const toggleTtsMode = () => {
-    const next = ttsMode === 'elevenlabs' ? 'browser' : 'elevenlabs';
+    const next = ttsMode === 'voice' ? 'script' : 'voice';
     setTtsMode(next);
     localStorage.setItem('lif_tts_mode', next);
   };
@@ -2332,7 +2326,8 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
                    borderColor: isSpeaking ? 'rgba(226,201,126,0.8)' : 'rgba(226,201,126,0.2)',
                    background: '#0d1117'
                  }}>
-              <img src="narrator.png" alt="Silente" className="w-full h-full object-cover" />
+              <img src="narrator.png" alt="Silente" className="w-full h-full object-cover"
+                   onError={e => { e.target.style.display='none'; e.target.parentNode.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;">🧙</div>'; }} />
             </div>
             
             {/* Magical Aura Rings */}
