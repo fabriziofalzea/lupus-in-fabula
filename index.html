@@ -714,6 +714,30 @@ function initFirebase() {
 }
 initFirebase();
 
+/* ── Safe Area iOS: applica padding via CSS var al primo frame ── */
+function applySafeArea() {
+  // Legge i valori reali dalla CSS env() tramite un elemento temporaneo
+  const el = document.createElement('div');
+  el.style.cssText = [
+    'position:fixed','top:0','left:0','right:0','bottom:0',
+    'padding-top:env(safe-area-inset-top,0px)',
+    'padding-bottom:env(safe-area-inset-bottom,0px)',
+    'pointer-events:none','visibility:hidden'
+  ].join(';');
+  document.body.appendChild(el);
+  const cs = getComputedStyle(el);
+  const top    = parseInt(cs.paddingTop)    || 0;
+  const bottom = parseInt(cs.paddingBottom) || 0;
+  document.body.removeChild(el);
+  // Forza le variabili come pixel espliciti così il CSS è sicuro
+  document.documentElement.style.setProperty('--sat', top + 'px');
+  document.documentElement.style.setProperty('--sab', bottom + 'px');
+  console.log('[SafeArea] top=' + top + 'px, bottom=' + bottom + 'px');
+}
+// Esegui subito e di nuovo dopo il primo paint (Capacitor può ritardare)
+applySafeArea();
+window.addEventListener('DOMContentLoaded', applySafeArea);
+
 /* ================================================================
    USER PROFILE (Google Auth)
    ================================================================ */
@@ -742,17 +766,18 @@ function UserProfile() {
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Detect Capacitor native (iOS/Android) — multiple fallbacks for reliability
+  const isNativeApp = !!(
+    window.Capacitor?.isNativePlatform?.() ||
+    window.Capacitor?.platform === 'ios' ||
+    window.Capacitor?.platform === 'android' ||
+    (typeof window !== 'undefined' && window.location.protocol === 'capacitor:')
+  );
 
   const loginGoogle = () => {
-    if(!auth) return;
+    if(!auth || isNativeApp) return;
     setAuthError('');
     const provider = new firebase.auth.GoogleAuthProvider();
-    const isNative = !!(window.Capacitor?.isNativePlatform?.());
-    if (isNative) {
-      // Google Sign-In non funziona in WKWebView senza plugin nativi — mostra messaggio chiaro
-      setAuthError("Google Sign-In non è disponibile nell'app iOS — lo abiliteremo presto. Per ora usa accesso con email e password.");
-      return;
-    }
     auth.signInWithPopup(provider)
       .then(() => setShowPanel(false))
       .catch(e => {
@@ -830,12 +855,14 @@ function UserProfile() {
           {mode === 'choose' && (
             <>
               <p className="font-cinzel text-moon text-sm font-bold mb-4">Accedi</p>
-              <button onClick={loginGoogle}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-2 transition-all active:scale-95"
-                style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)'}}>
-                <span className="text-lg">🔵</span>
-                <span className="text-white text-sm font-medium">Continua con Google</span>
-              </button>
+              {!isNativeApp && (
+                <button onClick={loginGoogle}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-2 transition-all active:scale-95"
+                  style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)'}}>
+                  <span className="text-lg">🔵</span>
+                  <span className="text-white text-sm font-medium">Continua con Google</span>
+                </button>
+              )}
               <button onClick={()=>{ setMode('email'); setIsRegister(false); }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all active:scale-95"
                 style={{background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)'}}>
