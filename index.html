@@ -704,7 +704,11 @@ function useAuth() {
     if(!auth) return;
     // Gestisce il ritorno dal redirect (solo su app nativa iOS)
     const isNative = !!(window.Capacitor?.isNativePlatform?.());
-    if (isNative) auth.getRedirectResult().catch(() => {});
+    if (isNative) {
+      auth.getRedirectResult()
+        .then(result => { if (result?.user) setUser(result.user); })
+        .catch(e => console.warn('getRedirectResult error:', e.code, e.message));
+    }
     return auth.onAuthStateChanged(u => setUser(u));
   }, []);
   return user;
@@ -726,11 +730,27 @@ function UserProfile() {
     const provider = new firebase.auth.GoogleAuthProvider();
     const isNative = !!(window.Capacitor?.isNativePlatform?.());
     if (isNative) {
-      auth.signInWithRedirect(provider).catch(e => setAuthError(e.message));
+      // Su iOS Capacitor: usa signInWithRedirect. Richiede che
+      // "capacitor://localhost" sia nei domini autorizzati Firebase Console.
+      auth.signInWithRedirect(provider)
+        .catch(e => {
+          console.warn('Google redirect error:', e.code, e.message);
+          if (e.code === 'auth/unauthorized-domain') {
+            setAuthError('Dominio non autorizzato. Aggiungi "capacitor://localhost" ai domini Firebase Console → Authentication → Settings → Authorized domains.');
+          } else {
+            setAuthError(e.message);
+          }
+        });
     } else {
       auth.signInWithPopup(provider)
         .then(()=>setShowPanel(false))
-        .catch(e => setAuthError(e.message));
+        .catch(e => {
+          if (e.code === 'auth/unauthorized-domain') {
+            setAuthError('Dominio non autorizzato in Firebase Console.');
+          } else {
+            setAuthError(e.message);
+          }
+        });
     }
   };
 
@@ -745,6 +765,7 @@ function UserProfile() {
       }
       setShowPanel(false); setEmail(''); setPassword('');
     } catch(e) {
+      console.warn('Auth error:', e.code, e.message);
       const msg = {
         'auth/user-not-found': 'Nessun account con questa email.',
         'auth/wrong-password': 'Password errata.',
@@ -752,7 +773,10 @@ function UserProfile() {
         'auth/weak-password': 'Password troppo corta (min. 6 caratteri).',
         'auth/invalid-email': 'Email non valida.',
         'auth/invalid-credential': 'Email o password errati.',
-      }[e.code] || e.message;
+        'auth/network-request-failed': 'Errore di rete. Controlla la connessione internet.',
+        'auth/too-many-requests': 'Troppi tentativi. Riprova tra qualche minuto.',
+        'auth/operation-not-allowed': 'Accesso email non abilitato. Abilitalo in Firebase Console → Authentication → Sign-in method.',
+      }[e.code] || `Errore (${e.code}): ${e.message}`;
       setAuthError(msg);
     } finally { setLoading(false); }
   };
