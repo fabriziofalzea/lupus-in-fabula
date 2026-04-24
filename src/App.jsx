@@ -2283,19 +2283,27 @@ function RoleCardC({ r, count, onAdd, onRemove, onInfo, unlocked }) {
       {/* Info button */}
       <button
         onClick={e => { e.stopPropagation(); onInfo(); }}
-        className="absolute bottom-1 left-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold transition-all active:scale-90"
-        style={{background:'rgba(0,0,0,0.65)', border:`1px solid ${r.color}55`, color: r.color}}>
+        className="absolute flex items-center justify-center font-bold transition-all active:scale-90"
+        style={{
+          bottom: -6, left: -6,
+          width: 22, height: 22, borderRadius: '50%',
+          background: 'rgba(30,30,40,0.92)',
+          border: '1.5px solid rgba(255,255,255,0.35)',
+          color: '#ffffff',
+          fontSize: 10,
+          zIndex: 10,
+        }}>
         i
       </button>
     </div>
   );
 }
 
-function CreateGameScreen({onStart, onBack}) {
-  const [step, setStep] = useState(1);
-  const [players, setPlayers] = useState([]);
+function CreateGameScreen({onStart, onBack, initialSetup}) {
+  const [step, setStep] = useState(initialSetup ? 2 : 1);
+  const [players, setPlayers] = useState(() => initialSetup ? initialSetup.playerNames : []);
   const [inputName, setInputName] = useState('');
-  const [roles, setRoles] = useState([]);
+  const [roles, setRoles] = useState(() => initialSetup ? initialSetup.specialRoles : []);
   const inputRef = useRef(null);
 
   const validPlayers = players.filter(n => n.trim().length > 0);
@@ -2317,7 +2325,7 @@ function CreateGameScreen({onStart, onBack}) {
   const removePlayer = i => setPlayers(p => p.filter((_,j)=>j!==i));
 
   // wolfCount è ora uno state separato; roles contiene SOLO ruoli speciali (no lupo, no villico)
-  const [wolfCount, setWolfCount] = useState(2);
+  const [wolfCount, setWolfCount] = useState(() => initialSetup ? initialSetup.wolfCount : 2);
   const [expandedPacks, setExpandedPacks] = useState({});
 
   const addRole = rid => setRoles(r=>[...r,rid]);
@@ -2367,7 +2375,7 @@ function CreateGameScreen({onStart, onBack}) {
       <div className="sticky top-0 z-10 px-4 pt-5 pb-3"
            style={{background:'rgba(13,17,23,0.97)', backdropFilter:'blur(12px)'}}>
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={onBack} className="text-gray-500 hover:text-white text-2xl transition-colors leading-none">←</button>
+          <button onClick={step===1 ? onBack : ()=>setStep(1)} className="text-gray-500 hover:text-white text-2xl transition-colors leading-none">←</button>
           <div className="flex-1">
             <h2 className="font-cinzel text-lg font-bold text-moon leading-none">
               {step===1 ? 'Chi gioca stanotte?' : 'Scegli i ruoli'}
@@ -4013,8 +4021,21 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
               })}
             </div>
 
+            {/* Rivincita rapida */}
             <button onClick={()=>{
-                onEndGame({ winner, gameId, date:new Date().toISOString(), players:Object.values(pStates) });
+                const setup = {
+                  playerNames: players.map(p => p.name),
+                  wolfCount: players.filter(p => p.role === 'lupo').length,
+                  specialRoles: players.map(p => p.role).filter(r => r !== 'lupo' && r !== 'villico'),
+                };
+                onEndGame({ winner, gameId, date:new Date().toISOString(), players:Object.values(pStates) }, setup);
+              }}
+              className="w-full py-4 rounded-2xl text-base font-bold mb-3 transition-all active:scale-95"
+              style={{background:'rgba(226,201,126,0.12)', border:'1px solid rgba(226,201,126,0.35)', color:'#e2c97e'}}>
+              🔄 Rivincita — stessi giocatori e ruoli
+            </button>
+            <button onClick={()=>{
+                onEndGame({ winner, gameId, date:new Date().toISOString(), players:Object.values(pStates) }, null);
               }}
               className="btn-gold w-full py-4 rounded-2xl text-base">
               💾 Salva e Torna alla Home
@@ -5168,6 +5189,7 @@ function App() {
   const [isPlayer, setIsPlayer] = useState(false);
   const [playerId, setPlayerId] = useState(null);
   const [showSetup, setShowSetup] = useState(false);
+  const [lastGameSetup, setLastGameSetup] = useState(null);
 
   // Helper: naviga al PlayerScreen dai parametri game+player
   const openPlayerScreen = useCallback((g, p) => {
@@ -5229,7 +5251,7 @@ function App() {
     setScreen('master');
   };
 
-  const handleEndGame = (result) => {
+  const handleEndGame = (result, setup) => {
     try {
       const h = JSON.parse(localStorage.getItem('lupus_history')||'[]');
       h.unshift(result);
@@ -5253,7 +5275,13 @@ function App() {
         }
       }
     } catch(e){}
-    setScreen('home');
+    if (setup) {
+      setLastGameSetup(setup);
+      setScreen('create');
+    } else {
+      setLastGameSetup(null);
+      setScreen('home');
+    }
   };
 
   if(screen==='player') {
@@ -5293,7 +5321,8 @@ function App() {
       {screen==='create' && (
         <CreateGameScreen
           onStart={handleCreateGame}
-          onBack={()=>setScreen('home')}
+          onBack={()=>{ setLastGameSetup(null); setScreen('home'); }}
+          initialSetup={lastGameSetup}
         />
       )}
 
