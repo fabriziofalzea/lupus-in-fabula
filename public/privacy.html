@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Lupus in Fabula</title>
+  <style>
+    :root {
+      --bg: #0a0a1a;
+      --surface: #12122a;
+      --border: rgba(255,255,255,0.08);
+      --gold: #e2c97e;
+      --text: #d1d5db;
+      --muted: #6b7280;
+      --white: #f9fafb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+    .hero {
+      background: linear-gradient(180deg, #12122a 0%, #0a0a1a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 48px 24px 40px;
+      text-align: center;
+    }
+    .hero .icon { font-size: 48px; margin-bottom: 16px; }
+    .hero h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .hero p { color: var(--muted); font-size: 14px; }
+    .lang-toggle {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .lang-btn {
+      padding: 6px 20px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .lang-btn.active {
+      background: rgba(226,201,126,0.15);
+      border-color: rgba(226,201,126,0.4);
+      color: var(--gold);
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      color: var(--gold);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section p { margin-bottom: 12px; font-size: 15px; color: var(--text); }
+    .section p:last-child { margin-bottom: 0; }
+    .section ul {
+      padding-left: 20px;
+      margin-bottom: 12px;
+    }
+    .section ul li {
+      font-size: 15px;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .section a { color: var(--gold); text-decoration: none; }
+    .section a:hover { text-decoration: underline; }
+    .updated {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 32px;
+    }
+    .contact-box {
+      background: rgba(226,201,126,0.05);
+      border: 1px solid rgba(226,201,126,0.2);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .contact-box a {
+      color: var(--gold);
+      font-weight: 600;
+      font-size: 15px;
+    }
+    [data-lang] { display: none; }
+    [data-lang].visible { display: block; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="icon">🐺</div>
+  <h1>LUPUS IN FABULA</h1>
+  <p>Privacy Policy</p>
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('it')">🇮🇹 Italiano</button>
+    <button class="lang-btn" onclick="setLang('en')">🇬🇧 English</button>
+  </div>
+</div>
+
+<!-- ══════════════ ITALIANO ══════════════ -->
+<div data-lang="it" class="visible">
+  <div class="container">
+    <p class="updated">Ultimo aggiornamento: 17 aprile 2026</p>
+
+    <div class="section">
+      <h2>📋 Panoramica</h2>
+      <p>Lupus in Fabula è un gioco da party che non richiede la creazione di un account per essere giocato. La raccolta di dati è minima e finalizzata esclusivamente al funzionamento del gioco.</p>
+      <p>Non vendiamo, affittiamo o condividiamo i tuoi dati personali con terze parti a scopo pubblicitario o commerciale.</p>
+    </div>
+
+    <div class="section">
+      <h2>📊 Dati che raccogliamo</h2>
+      <p><strong>Dati di autenticazione (opzionali)</strong><br>
+      Se scegli di accedere con email/password o con Google Sign-In, raccogliamo il tuo indirizzo email e, nel caso di Google, il nome visualizzato. Questi dati sono gestiti tramite <strong>Firebase Authentication</strong> (Google LLC) e sono necessari solo per salvare le preferenze della partita tra sessioni diverse.</p>
+
+      <p><strong>Dati di sessione di gioco</strong><br>
+      Durante una partita, i nomi dei giocatori e i ruoli assegnati vengono memorizzati temporaneamente nel database per sincronizzare i dispositivi in tempo reale. Questi dati vengono eliminati al termine della partita o entro 24 ore.</p>
+
+      <p><strong>Testo per la voce narrante (opzionale)</strong><br>
+      Se attivi la modalità "Voce AI", i testi del narratore vengono inviati al servizio <strong>ElevenLabs</strong> per la sintesi vocale. ElevenLabs non associa questi testi alla tua identità. Consulta la <a href="https://elevenlabs.io/privacy" target="_blank">privacy policy di ElevenLabs</a>.</p>
+    </div>
+
+    <div class="section">
+      <h2>🔒 Come usiamo i dati</h2>
+      <ul>
+        <li>Sincronizzare i dispositivi durante una partita in tempo reale</li>
+        <li>Salvare le preferenze del narratore e della modalità vocale</li>
+        <li>Gestire l'autenticazione se scegli di effettuare il login</li>
+      </ul>
+      <p>Non utilizziamo i tuoi dati per pubblicità, profilazione o analisi comportamentali.</p>
+    </div>
+
+    <div class="section">
+      <h2>🌐 Servizi di terze parti</h2>
+      <ul>
+        <li><strong>Firebase (Google LLC)</strong> — Autenticazione e database in tempo reale. <a href="https://policies.google.com/privacy" target="_blank">Privacy Policy Google</a></li>
+        <li><strong>ElevenLabs</strong> — Sintesi vocale AI (solo se la funzione è attivata). <a href="https://elevenlabs.io/privacy" target="_blank">Privacy Policy ElevenLabs</a></li>
+        <li><strong>Vercel Inc.</strong> — Hosting dell'applicazione web. <a href="https://vercel.com/legal/privacy-policy" target="_blank">Privacy Policy Vercel</a></li>
+        <li><strong>Apple App Store</strong> — Acquisti in-app gestiti direttamente da Apple. <a href="https://www.apple.com/legal/privacy/" target="_blank">Privacy Policy Apple</a></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>👶 Minori</h2>
+      <p>Lupus in Fabula non è destinato a bambini di età inferiore ai 13 anni. Non raccogliamo consapevolmente dati personali di minori. Se sei un genitore e ritieni che tuo figlio abbia fornito dati personali, contattaci per la rimozione.</p>
+    </div>
+
+    <div class="section">
+      <h2>⚖️ I tuoi diritti (GDPR)</h2>
+      <p>Se sei residente nell'Unione Europea, hai il diritto di accedere, rettificare o cancellare i tuoi dati personali. Puoi esercitare questi diritti contattandoci all'indirizzo qui sotto. Puoi anche eliminare il tuo account direttamente dall'app nelle impostazioni.</p>
+    </div>
+
+    <div class="section">
+      <h2>📬 Contatti</h2>
+      <div class="contact-box">
+        <p style="margin-bottom:8px;color:var(--muted);font-size:14px;">Per domande sulla privacy:</p>
+        <a href="mailto:fabriziofalzea@gmail.com">fabriziofalzea@gmail.com</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ENGLISH ══════════════ -->
+<div data-lang="en">
+  <div class="container">
+    <p class="updated">Last updated: April 17, 2026</p>
+
+    <div class="section">
+      <h2>📋 Overview</h2>
+      <p>Lupus in Fabula is a party game that does not require account creation to play. Data collection is minimal and solely aimed at making the game work.</p>
+      <p>We do not sell, rent, or share your personal data with third parties for advertising or commercial purposes.</p>
+    </div>
+
+    <div class="section">
+      <h2>📊 Data we collect</h2>
+      <p><strong>Authentication data (optional)</strong><br>
+      If you choose to sign in with email/password or Google Sign-In, we collect your email address and, in the case of Google, your display name. This data is managed through <strong>Firebase Authentication</strong> (Google LLC) and is only needed to save game preferences across sessions.</p>
+
+      <p><strong>Game session data</strong><br>
+      During a game, player names and assigned roles are temporarily stored in the database to synchronize devices in real time. This data is deleted at the end of the game or within 24 hours.</p>
+
+      <p><strong>Narrator text (optional)</strong><br>
+      If you enable "AI Voice" mode, narrator texts are sent to <strong>ElevenLabs</strong> for speech synthesis. ElevenLabs does not associate these texts with your identity. See the <a href="https://elevenlabs.io/privacy" target="_blank">ElevenLabs privacy policy</a>.</p>
+    </div>
+
+    <div class="section">
+      <h2>🔒 How we use your data</h2>
+      <ul>
+        <li>Synchronize devices during a real-time game session</li>
+        <li>Save narrator and voice mode preferences</li>
+        <li>Manage authentication if you choose to log in</li>
+      </ul>
+      <p>We do not use your data for advertising, profiling, or behavioral analytics.</p>
+    </div>
+
+    <div class="section">
+      <h2>🌐 Third-party services</h2>
+      <ul>
+        <li><strong>Firebase (Google LLC)</strong> — Authentication and real-time database. <a href="https://policies.google.com/privacy" target="_blank">Google Privacy Policy</a></li>
+        <li><strong>ElevenLabs</strong> — AI voice synthesis (only when feature is enabled). <a href="https://elevenlabs.io/privacy" target="_blank">ElevenLabs Privacy Policy</a></li>
+        <li><strong>Vercel Inc.</strong> — Web application hosting. <a href="https://vercel.com/legal/privacy-policy" target="_blank">Vercel Privacy Policy</a></li>
+        <li><strong>Apple App Store</strong> — In-app purchases managed directly by Apple. <a href="https://www.apple.com/legal/privacy/" target="_blank">Apple Privacy Policy</a></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>👶 Children</h2>
+      <p>Lupus in Fabula is not intended for children under 13. We do not knowingly collect personal data from minors. If you are a parent and believe your child has provided personal data, please contact us for removal.</p>
+    </div>
+
+    <div class="section">
+      <h2>⚖️ Your rights (GDPR)</h2>
+      <p>If you are a resident of the European Union, you have the right to access, rectify, or delete your personal data. You may exercise these rights by contacting us at the address below. You can also delete your account directly in the app settings.</p>
+    </div>
+
+    <div class="section">
+      <h2>📬 Contact</h2>
+      <div class="contact-box">
+        <p style="margin-bottom:8px;color:var(--muted);font-size:14px;">For privacy inquiries:</p>
+        <a href="mailto:fabriziofalzea@gmail.com">fabriziofalzea@gmail.com</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function setLang(lang) {
+    document.querySelectorAll('[data-lang]').forEach(el => {
+      el.classList.toggle('visible', el.dataset.lang === lang);
+    });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.textContent.includes(lang === 'it' ? 'Italiano' : 'English'));
+    });
+    document.documentElement.lang = lang;
+  }
+</script>
+
+</body>
+</html>
