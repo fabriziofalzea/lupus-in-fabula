@@ -492,7 +492,7 @@ const ROLE_VISUALS = {
    NIGHT NARRATION
    ================================================================ */
 const NIGHT_NARRATION = {
-  open:     { open: 'La notte cala sul villaggio. Il silenzio inghiotte ogni suono, ogni movimento.', close: null },
+  open:     { open: 'La notte cala sul villaggio. Il silenzio inghiotte ogni suono, ogni movimento.', close: 'Tutti, chiudano gli occhi.' },
   cupido:   { open: 'Cupido, apra gli occhi. Scegli i due cuori che batteranno all\'unisono — la tua freccia deciderà il loro destino per sempre.', close: 'Cupido, chiuda gli occhi.' },
   mitomane: { open: 'Il Mitomane, apra gli occhi. Scegli la maschera che indosserai per tutta la partita.', close: 'Il Mitomane, chiuda gli occhi.' },
   veggente: { open: 'Il Veggente, apra gli occhi. Scegli chi vuoi osservare questa notte.', close: 'Il Veggente, chiuda gli occhi.' },
@@ -3240,13 +3240,13 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
       // ── Sceglie la frase statica del narratore (nessuna API call) ──
       let narr;
       if(dawnVictim && pStates[dawnVictim]) {
-        narr = 'La notte ha reclamato una vittima. Il suo nome apparirà adesso sui vostri schermi.';
+        narr = 'Tutti, aprano gli occhi. La notte ha reclamato una vittima. Il suo nome apparirà adesso sui vostri schermi.';
       } else if(figlioTransformed) {
-        narr = "L'alba arriva silenziosamente. Le ombre si ritirano. Nel bosco, una creatura si è svegliata. Il villaggio rimane intatto — per ora.";
+        narr = "Tutti, aprano gli occhi. L'alba arriva silenziosamente. Le ombre si ritirano. Nel bosco, una creatura si è svegliata. Il villaggio rimane intatto — per ora.";
       } else if(stregaUsedHeal) {
-        narr = "L'alba arriva silenziosamente. Le ombre si ritirano. Una pozione misteriosa ha respinto la morte. Stanotte non ci sono vittime.";
+        narr = "Tutti, aprano gli occhi. L'alba arriva silenziosamente. Le ombre si ritirano. Una pozione misteriosa ha respinto la morte. Stanotte non ci sono vittime.";
       } else {
-        narr = "L'alba arriva silenziosamente. Le ombre si ritirano. La notte è passata senza sangue. Il villaggio si ritrova intatto al nuovo giorno.";
+        narr = "Tutti, aprano gli occhi. L'alba arriva silenziosamente. Le ombre si ritirano. La notte è passata senza sangue. Il villaggio si ritrova intatto al nuovo giorno.";
       }
 
       // ── Registra evento notte nel log recap ──
@@ -3288,7 +3288,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
         currentNightStep: null,
         nightVotes: null,
         currentNightVictim: null,
-        dawnVictimId: dawnVictim || null,
+        dawnVictimId: dawnVictim || poisonVictimId || null,
       });
       setDayNum(d=>d+1);
       window.stopSfx('night');
@@ -3297,7 +3297,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
       setTimeout(() => {
         setNarrationAndPhase('day', '', dayTimerMinsRef.current * 60, { dawnVictimId: null });
         setDawnInfo(null);
-      }, 7000);
+      }, 12000);
       }; // fine proceedToDawn
 
       // Riproduci il close dell'ultimo step (es. "I Lupi, chiudano gli occhi.")
@@ -3364,7 +3364,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
              { currentNightStep: null, nightVotes: null, dayVictimId: null }
            );
            window.playSfx('night');
-         }, 6000);
+         }, 10000);
       } else {
          pushEvent({ type: 'day', turn: dayNum, dayVictim: null, noMajority: true });
          setNarrationAndPhase('ended_voting',
@@ -3377,7 +3377,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
              { currentNightStep: null, nightVotes: null, dayVictimId: null }
            );
            window.playSfx('night');
-         }, 6000);
+         }, 10000);
       }
   };
 
@@ -4361,34 +4361,8 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
                   </span>
                 </div>
 
-                {/* Contenuto — solo la scheda ruolo */}
-                <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col items-center">
-                  {/* Card ruolo grande */}
-                  <div className="w-full max-w-sm rounded-3xl p-6 mb-6"
-                       style={{background:`linear-gradient(145deg, ${myRole?.color || '#333'}18, ${myRole?.color || '#333'}08)`,
-                               border:`1px solid ${myRole?.color || '#555'}44`,
-                               boxShadow:`0 0 40px ${myRole?.color || '#333'}15`}}>
-                    <div className="text-center mb-5">
-                      <div className="text-7xl mb-3 leading-none"
-                           style={{filter:`drop-shadow(0 0 20px ${myRole?.color || '#fff'}66)`}}>
-                        {myRole?.icon || '❓'}
-                      </div>
-                      <h3 className="font-cinzel text-white font-bold text-2xl mb-1">{myRole?.name || '—'}</h3>
-                      <span className="text-xs px-3 py-1 rounded-full font-bold"
-                            style={{background:`${myRole?.color || '#555'}22`,
-                                    border:`1px solid ${myRole?.color || '#555'}55`,
-                                    color: myRole?.color || '#aaa'}}>
-                        {myRole?.team === 'lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
-                      </span>
-                    </div>
-                    <p className="text-gray-300 text-sm leading-relaxed text-center">{myRole?.description}</p>
-                    {myRole?.tip && (
-                      <div className="mt-4 p-3 rounded-xl text-xs text-white/40 italic text-center"
-                           style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)'}}>
-                        💡 {myRole.tip}
-                      </div>
-                    )}
-                  </div>
+                {/* Contenuto */}
+                <div className="flex-1 overflow-y-auto px-4 py-5 flex flex-col items-center">
 
                   {/* Fase attuale — info minima */}
                   <div className="w-full max-w-sm rounded-2xl px-4 py-3 text-center mb-4"
@@ -4409,11 +4383,31 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
                       db.ref(`games/${gameId}/nightVotes/${narratorP.id}`).set(targetId);
                     };
                     if (myVote) {
+                      // Veggente: mostra l'allineamento del giocatore osservato
+                      let veggResult = null;
+                      if (narratorP.role === 'veggente' && pStates[myVote]) {
+                        const targetP = pStates[myVote];
+                        const realRoleId = (targetP.role === 'mitomane' && mitomaneTarget)
+                          ? pStates[mitomaneTarget]?.role
+                          : targetP.role;
+                        const isWolf = ROLES[realRoleId]?.team === 'lupi';
+                        veggResult = (
+                          <div className="mt-3 rounded-xl px-4 py-3 text-center"
+                               style={{background: isWolf ? 'rgba(192,57,43,0.18)' : 'rgba(39,174,96,0.18)',
+                                       border: `1px solid ${isWolf ? 'rgba(192,57,43,0.45)' : 'rgba(39,174,96,0.45)'}`}}>
+                            <p className="text-white text-xs font-bold mb-0.5">{targetP.name}</p>
+                            <p className="font-cinzel font-bold text-base" style={{color: isWolf ? '#e74c3c' : '#2ecc71'}}>
+                              {isWolf ? '🐺 È un Lupo!' : '🌾 È del Villaggio'}
+                            </p>
+                          </div>
+                        );
+                      }
                       return (
                         <div className="w-full max-w-sm rounded-2xl px-4 py-4 text-center mb-4"
                              style={{background:`${myRole?.color || '#555'}18`, border:`1px solid ${myRole?.color || '#555'}44`}}>
                           <p className="text-white text-sm font-bold">✓ Voto inviato</p>
                           <p className="text-gray-500 text-xs mt-1">In attesa che il narratore avanzi…</p>
+                          {veggResult}
                         </div>
                       );
                     }
@@ -4478,7 +4472,32 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
                     );
                   })()}
 
-                  <p className="text-gray-700 text-xs mt-2 text-center italic">
+                  {/* Card ruolo — in fondo, compatta */}
+                  <div className="w-full max-w-sm rounded-2xl p-4 mt-2 mb-2"
+                       style={{background:`linear-gradient(145deg, ${myRole?.color || '#333'}14, ${myRole?.color || '#333'}06)`,
+                               border:`1px solid ${myRole?.color || '#555'}33`}}>
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-4xl leading-none"
+                            style={{filter:`drop-shadow(0 0 10px ${myRole?.color || '#fff'}55)`}}>
+                        {myRole?.icon || '❓'}
+                      </span>
+                      <div>
+                        <h3 className="font-cinzel text-white font-bold text-base leading-tight">{myRole?.name || '—'}</h3>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                              style={{background:`${myRole?.color || '#555'}22`,
+                                      border:`1px solid ${myRole?.color || '#555'}44`,
+                                      color: myRole?.color || '#aaa'}}>
+                          {myRole?.team === 'lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-gray-400 text-xs leading-relaxed">{myRole?.description}</p>
+                    {myRole?.tip && (
+                      <p className="text-white/30 text-[10px] italic mt-2">💡 {myRole.tip}</p>
+                    )}
+                  </div>
+
+                  <p className="text-gray-700 text-xs mt-2 mb-1 text-center italic">
                     Il log della partita non è visibile in questa schermata.
                   </p>
                 </div>
@@ -5367,32 +5386,53 @@ function PlayerScreen({gameId, playerId}) {
                       className="text-gray-500 hover:text-white text-xl leading-none px-1">✕</button>
             </div>
             {(()=>{
-              const roleIds = [...new Set(Object.values(gameData.players).map(p=>p.role))];
-              return roleIds.map(rid=>{
-                const r = ROLES[rid];
-                if(!r) return null;
-                const teamColor = r.team==='lupi'?'#c0392b':'#27ae60';
-                const isMyRole = rid === player?.role;
-                return (
-                  <div key={rid} className="flex gap-3 items-start px-3 py-2.5 rounded-xl mb-1"
-                       style={{background: isMyRole ? r.color+'18' : 'rgba(255,255,255,0.03)',
-                               border: isMyRole ? `1px solid ${r.color}44` : '1px solid rgba(255,255,255,0.05)'}}>
-                    <span className="text-xl shrink-0 mt-0.5">{r.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-white text-sm font-bold">{r.name}</span>
-                        {isMyRole && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-                                          style={{background:r.color+'33',color:r.color}}>tu</span>}
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto"
-                              style={{background:`${teamColor}18`,color:teamColor,border:`1px solid ${teamColor}33`}}>
-                          {r.team==='lupi'?'Lupi':'Villaggio'}
-                        </span>
+              const allPlayers = Object.entries(gameData.players || {});
+              const alivePlayers = allPlayers.filter(([,p]) => p.alive !== false);
+              const deadPlayers  = allPlayers.filter(([,p]) => p.alive === false);
+              const roleIds = [...new Set(alivePlayers.map(([,p])=>p.role))];
+              return (
+                <>
+                  {roleIds.map(rid=>{
+                    const r = ROLES[rid];
+                    if(!r) return null;
+                    const teamColor = r.team==='lupi'?'#c0392b':'#27ae60';
+                    const isMyRole = rid === player?.role;
+                    return (
+                      <div key={rid} className="flex gap-3 items-start px-3 py-2.5 rounded-xl mb-1"
+                           style={{background: isMyRole ? r.color+'18' : 'rgba(255,255,255,0.03)',
+                                   border: isMyRole ? `1px solid ${r.color}44` : '1px solid rgba(255,255,255,0.05)'}}>
+                        <span className="text-xl shrink-0 mt-0.5">{r.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-white text-sm font-bold">{r.name}</span>
+                            {isMyRole && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                              style={{background:r.color+'33',color:r.color}}>tu</span>}
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto"
+                                  style={{background:`${teamColor}18`,color:teamColor,border:`1px solid ${teamColor}33`}}>
+                              {r.team==='lupi'?'Lupi':'Villaggio'}
+                            </span>
+                          </div>
+                          <p className="text-gray-500 text-[11px] leading-relaxed">{r.description}</p>
+                        </div>
                       </div>
-                      <p className="text-gray-500 text-[11px] leading-relaxed">{r.description}</p>
+                    );
+                  })}
+                  {deadPlayers.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest mb-2 px-1">💀 Eliminati</p>
+                      <div className="flex flex-wrap gap-2">
+                        {deadPlayers.map(([id, p]) => (
+                          <span key={id}
+                                className="text-gray-500 text-xs px-3 py-1 rounded-full"
+                                style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
+                            {p.name}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              });
+                  )}
+                </>
+              );
             })()}
             <button onClick={()=>setShowRolesInGame(false)}
                     className="w-full mt-4 py-3 rounded-xl text-sm font-bold text-gray-400"
