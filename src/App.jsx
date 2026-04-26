@@ -2965,7 +2965,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
   }, [phase, timer, timerOn]);
 
   // Reset voto locale del narratore-giocatore a ogni cambio fase o turno notturno
-  useEffect(() => { setNarratorLocalVote(null); }, [phase, gameData?.currentNightStep?.key]);
+  useEffect(() => { setNarratorLocalVote(null); }, [phase, nightStep]);
 
   const [alfaMark, setAlfaMark] = useState(null);        // id del giocatore marcato dal Lupo Alfa
   const [mitomaneTarget, setMitomaneTarget] = useState(null); // id del giocatore imitato dal Mitomane
@@ -4400,10 +4400,10 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
                   </div>
 
                   {/* ── AZIONE NOTTE: vota se è il proprio turno ── */}
-                  {narratorP.alive && phase === 'night' && gameData?.currentNightStep?.roleId === narratorP.role && (() => {
-                    const myVote = narratorLocalVote || gameData?.nightVotes?.[narratorP.id];
+                  {narratorP.alive && phase === 'night' && activeNightSteps[nightStep]?.roleId === narratorP.role && (() => {
+                    const myVote = narratorLocalVote || nightVotes[narratorP.id];
                     const castNarratorNightVote = (targetId) => {
-                      if (narratorLocalVote || gameData?.nightVotes?.[narratorP.id]) return;
+                      if (narratorLocalVote || nightVotes[narratorP.id]) return;
                       window.haptic('select');
                       setNarratorLocalVote(targetId);
                       db.ref(`games/${gameId}/nightVotes/${narratorP.id}`).set(targetId);
@@ -4417,7 +4417,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
                         </div>
                       );
                     }
-                    const alivePlayers = Object.entries(gameData?.players || {}).filter(([id, p]) => p.alive && id !== narratorP.id);
+                    const alivePlayers = Object.entries(pStates).filter(([id, p]) => p.alive && id !== narratorP.id);
                     return (
                       <div className="w-full max-w-sm mb-4">
                         <div className="rounded-2xl p-4 mb-3"
@@ -4444,13 +4444,13 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
 
                   {/* ── AZIONE GIORNO: vota durante la votazione ── */}
                   {narratorP.alive && phase === 'voting' && (() => {
-                    const myDayVote = narratorLocalVote || gameData?.dayVotes?.[narratorP.id];
+                    const myDayVote = narratorLocalVote || dayVotes[narratorP.id];
                     const castNarratorDayVote = (targetId) => {
                       window.haptic('select');
                       setNarratorLocalVote(targetId);
                       db.ref(`games/${gameId}/dayVotes/${narratorP.id}`).set(targetId);
                     };
-                    const alivePlayers = Object.entries(gameData?.players || {}).filter(([id, p]) => p.alive && id !== narratorP.id);
+                    const alivePlayers = Object.entries(pStates).filter(([id, p]) => p.alive && id !== narratorP.id);
                     return (
                       <div className="w-full max-w-sm mb-4">
                         <div className="rounded-2xl p-4 mb-3"
