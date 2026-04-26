@@ -319,6 +319,32 @@ window.afterSpeech = (callback, fallbackMs = 8000) => {
   setTimeout(fire, fallbackMs);
 };
 
+// === HAPTIC FEEDBACK ===
+// Su nativo iOS/Android usa Capacitor Haptics; su web Android usa navigator.vibrate(); su iOS web silenzioso.
+window.haptic = async (type = 'medium') => {
+  try {
+    if (window.Capacitor?.isNativePlatform?.()) {
+      const { Haptics, ImpactStyle, NotificationType } = await import('@capacitor/haptics');
+      if (type === 'light')   return Haptics.impact({ style: ImpactStyle.Light });
+      if (type === 'medium')  return Haptics.impact({ style: ImpactStyle.Medium });
+      if (type === 'heavy')   return Haptics.impact({ style: ImpactStyle.Heavy });
+      if (type === 'success') return Haptics.notification({ type: NotificationType.Success });
+      if (type === 'warning') return Haptics.notification({ type: NotificationType.Warning });
+      if (type === 'error')   return Haptics.notification({ type: NotificationType.Error });
+      if (type === 'select')  return Haptics.selectionChanged();
+    } else if (navigator.vibrate) {
+      // Fallback web (Android Chrome) — pattern in ms
+      if (type === 'light')   navigator.vibrate(10);
+      else if (type === 'medium')  navigator.vibrate(25);
+      else if (type === 'heavy')   navigator.vibrate([30, 20, 30]);
+      else if (type === 'success') navigator.vibrate([15, 10, 15]);
+      else if (type === 'warning') navigator.vibrate([20, 15, 20, 15, 20]);
+      else if (type === 'error')   navigator.vibrate([40, 20, 40]);
+      else if (type === 'select')  navigator.vibrate(8);
+    }
+  } catch (e) { /* silenzioso — haptics non bloccante */ }
+};
+
 window.playSfx = (id) => {
   const el = document.getElementById('sfx-'+id);
   if(!el) return;
@@ -513,16 +539,6 @@ function checkWin(players, lovers) {
   const alive = Object.values(players).filter(p => p.alive);
   const wolves = alive.filter(p => ROLES[p.role]?.team === 'lupi');
   const villagers = alive.filter(p => ROLES[p.role]?.team === 'villaggio');
-
-  // Win condition speciale Cupido: se i soli sopravvissuti sono esattamente i due innamorati, vince l'amore
-  if (lovers && Object.keys(lovers).length >= 2) {
-    const loverIds = Object.keys(lovers).slice(0, 2);
-    const aliveIds = new Set(Object.keys(players).filter(k => players[k]?.alive));
-    const bothLoversAlive = loverIds.every(lid => aliveIds.has(lid));
-    if (bothLoversAlive && aliveIds.size === 2 && loverIds.every(lid => aliveIds.has(lid))) {
-      return 'amore';
-    }
-  }
 
   if (wolves.length === 0) return 'villaggio';
   if (wolves.length >= villagers.length) return 'lupi';
@@ -1955,11 +1971,11 @@ async function writeGameStats(uid, gameResult) {
   const updated = {
     gamesHosted: (prev.gamesHosted || 0) + 1,
     villaggioWins: (prev.villaggioWins || 0) + (winner === 'villaggio' ? 1 : 0),
-    lupiWins: (prev.lupiWins || 0) + (winner === 'lupi' ? 1 : 0),
+    lupiWins: (prev.lupiWins || 0) + (winner === 'lupi' || winner === 'amore' ? 1 : 0),
     lastGame: Date.now(),
     rolesUsed,
   };
-  await statsRef.set(updated);
+  await statsRef.update(updated);
   // Init avatar if not set
   const avatarRef = db.ref(`users/${uid}/avatar`);
   const avatarSnap = await avatarRef.once('value');
@@ -2247,33 +2263,27 @@ function ProfileScreen({ user, onBack }) {
    CREATE GAME SCREEN
    ================================================================ */
 /* Card ruolo — variante C: tap aggiunge, badge sovrapposto rimuove, bottone i per info */
-function RoleCardC({ r, count, onAdd, onRemove, onInfo, unlocked }) {
+function RoleCardC({ r, count, onAdd, onInfo, unlocked, disabled }) {
   return (
     <div className="relative" style={{overflow:'visible'}}>
-      {/* Badge rimovi sovrapposto (iOS-style) */}
-      {unlocked && count > 0 && (
-        <button
-          onClick={e => { e.stopPropagation(); onRemove(); }}
-          className="absolute z-10 flex items-center justify-center font-bold transition-all active:scale-90"
-          style={{
-            top: -6, right: -6,
-            width: 20, height: 20, borderRadius: '50%',
-            background: r.color, color: '#0d1117',
-            border: '2px solid #0d1117',
-            fontSize: 9,
-          }}>
-          {count > 1 ? count : '✕'}
-        </button>
+      {/* Badge count — solo indicatore, nessuna azione */}
+      {count > 0 && (
+        <div className="absolute z-10 flex items-center justify-center font-bold pointer-events-none"
+          style={{ top: -6, right: -6, width: 20, height: 20, borderRadius: '50%',
+            background: r.color, color: '#0d1117', border: '2px solid #0d1117', fontSize: 9 }}>
+          {count}
+        </div>
       )}
       {/* Card principale */}
       <button
         onClick={onAdd}
+        disabled={disabled}
         className="relative w-full flex flex-col items-center gap-1 py-3 px-1 rounded-2xl transition-all active:scale-95"
         style={{
           background: count > 0 ? `${r.color}22` : 'rgba(255,255,255,0.04)',
           border: `1px solid ${count > 0 ? r.color + '88' : r.color + '33'}`,
           minHeight: 76,
-          opacity: unlocked ? 1 : 0.55,
+          opacity: (disabled && count === 0) ? 0.35 : unlocked ? 1 : 0.55,
         }}>
         {!unlocked && <span className="absolute top-1 right-1 text-xs leading-none">🔒</span>}
         <span className="text-2xl leading-none">{r.icon}</span>
@@ -2300,60 +2310,66 @@ function RoleCardC({ r, count, onAdd, onRemove, onInfo, unlocked }) {
 }
 
 function CreateGameScreen({onStart, onBack, initialSetup}) {
-  const [step, setStep] = useState(initialSetup ? 2 : 1);
+  const [step, setStep] = useState(initialSetup ? (initialSetup.initialStep ?? 2) : 1);
   const [players, setPlayers] = useState(() => initialSetup ? initialSetup.playerNames : []);
   const [inputName, setInputName] = useState('');
-  const [roles, setRoles] = useState(() => initialSetup ? initialSetup.specialRoles : []);
   const inputRef = useRef(null);
-
-  const validPlayers = players.filter(n => n.trim().length > 0);
-  const rolesNeeded = validPlayers.length;
-  const canStep1 = validPlayers.length >= 4;
-
-  const setPlayerName = (i, v) => {
-    const p = [...players]; p[i]=v; setPlayers(p);
-  };
-
-  const addPlayer = () => {
-    const n = inputName.trim();
-    if (!n) return;
-    setPlayers(p=>[...p, n]);
-    setInputName('');
-    setTimeout(()=>inputRef.current?.focus(),50);
-  };
-
-  const removePlayer = i => setPlayers(p => p.filter((_,j)=>j!==i));
-
-  // wolfCount è ora uno state separato; roles contiene SOLO ruoli speciali (no lupo, no villico)
-  const [wolfCount, setWolfCount] = useState(() => initialSetup ? initialSetup.wolfCount : 2);
+  // wolfCount separato; roles = tutti i ruoli non-lupo (incluso villico) scelti manualmente
+  const [wolfCount, setWolfCount] = useState(() => initialSetup ? initialSetup.wolfCount : 1);
+  const [roles, setRoles] = useState(() => initialSetup ? (initialSetup.allRoles || initialSetup.specialRoles || []) : []);
   const [expandedPacks, setExpandedPacks] = useState({});
-
-  const addRole = rid => setRoles(r=>[...r,rid]);
-  const removeRole = i => setRoles(r=>r.filter((_,j)=>j!==i));
-  // rimuove l'ultima occorrenza di rid (per variant C badge tap)
-  const removeLastRole = rid => setRoles(r => {
-    const idx = r.lastIndexOf(rid);
-    if (idx === -1) return r;
-    return r.filter((_,j) => j !== idx);
-  });
-
-  const roleCount = useMemo(()=>{
-    const c={};
-    roles.forEach(r=>c[r]=(c[r]||0)+1);
-    return c;
-  },[roles]);
-
-  const [expandedRole, setExpandedRole] = useState(null);
+  const [showHint, setShowHint] = useState(false);
   const [previewRole, setPreviewRole] = useState(null);
   const [paywallPack, setPaywallPack] = useState(null);
   const [purchasedPacks, setPurchasedPacks] = useState(() => {
     try { return JSON.parse(localStorage.getItem('lif_purchased_packs') || '[]'); }
     catch { return []; }
   });
-  const isUnlocked = rid => {
-    const r = ROLES[rid];
-    return !r?.pack || purchasedPacks.includes(r.pack);
+  // Narratore gioca?
+  const [narratorPlays, setNarratorPlays] = useState(() => !!initialSetup?.narratorName);
+  const [narratorName, setNarratorName] = useState(() => initialSetup?.narratorName || '');
+
+  const validPlayers = players.filter(n => n.trim().length > 0);
+  const narratorActive = narratorPlays && narratorName.trim().length > 0;
+  const rolesNeeded = validPlayers.length + (narratorActive ? 1 : 0);
+  const canStep1 = rolesNeeded >= 4;
+  const spotsLeft = rolesNeeded - wolfCount - roles.length;
+  const spotsFull = spotsLeft <= 0;
+  const rolesOk = wolfCount >= 1 && spotsLeft === 0;
+
+  // Hint "fai tap" — appare entrando in step 3, scompare dopo 2.5s
+  useEffect(() => {
+    if (step === 3) {
+      setShowHint(true);
+      const t = setTimeout(() => setShowHint(false), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [step]);
+
+  const roleCount = useMemo(() => {
+    const c = {};
+    roles.forEach(r => c[r] = (c[r] || 0) + 1);
+    return c;
+  }, [roles]);
+
+  const setPlayerName = (i, v) => { const p = [...players]; p[i] = v; setPlayers(p); };
+  const addPlayer = () => {
+    const n = inputName.trim();
+    if (!n) return;
+    setPlayers(p => [...p, n]);
+    setInputName('');
+    setTimeout(() => inputRef.current?.focus(), 50);
   };
+  const removePlayer = i => setPlayers(p => p.filter((_, j) => j !== i));
+
+  const addRole = rid => { if (!spotsFull) setRoles(r => [...r, rid]); };
+  const removeLastRole = rid => setRoles(r => {
+    const idx = r.lastIndexOf(rid);
+    if (idx === -1) return r;
+    return r.filter((_, j) => j !== idx);
+  });
+
+  const isUnlocked = rid => { const r = ROLES[rid]; return !r?.pack || purchasedPacks.includes(r.pack); };
   const handleUnlock = packId => {
     if (packId === '_open_combo') { setPaywallPack('combo'); return; }
     const pack = PACKS[packId];
@@ -2362,11 +2378,20 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
     setPurchasedPacks(next);
     localStorage.setItem('lif_purchased_packs', JSON.stringify(next));
   };
-  // rolesOk: almeno 1 lupo e i ruoli speciali non superano i posti disponibili
-  const villiciAuto = Math.max(0, rolesNeeded - wolfCount - roles.length);
-  const rolesOk = wolfCount >= 1 && (wolfCount + roles.length) <= rolesNeeded;
-  // bilanciamento calcolato tenendo conto dei villici automatici
-  const balanceVal = (wolfCount * 3.5) - (roles.length + villiciAuto);
+
+  const handleBack = () => { if (step === 1) onBack(); else setStep(s => s - 1); };
+
+  // Consigli lupi
+  const recommended = rolesNeeded <= 5 ? 1 : rolesNeeded <= 8 ? 2 : rolesNeeded <= 11 ? 3 : 4;
+  const wolfDiff = wolfCount - recommended;
+  const wolfAdvice = wolfDiff === 0
+    ? { text: `✓ Perfetto per ${rolesNeeded} giocatori`, color: '#4ade80' }
+    : wolfDiff === 1 ? { text: 'Partita un po\' più difficile per il villaggio', color: '#fbbf24' }
+    : wolfDiff > 1  ? { text: '⚠️ I lupi sono troppo forti', color: '#f87171' }
+    : wolfDiff === -1 ? { text: 'Partita un po\' più facile per il villaggio', color: '#fbbf24' }
+    : { text: '⚠️ Il villaggio ha un grande vantaggio', color: '#f87171' };
+
+  const stepTitles = ['Chi gioca stanotte?', 'Quanti lupi?', 'Scegli i ruoli'];
 
   return (
     <div className="min-h-screen screen-safe layer pb-28">
@@ -2375,123 +2400,201 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
       <div className="sticky top-0 z-10 px-4 pt-5 pb-3"
            style={{background:'rgba(13,17,23,0.97)', backdropFilter:'blur(12px)'}}>
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={step===1 ? onBack : ()=>setStep(1)} className="text-gray-500 hover:text-white text-2xl transition-colors leading-none">←</button>
+          <button onClick={handleBack} className="text-gray-500 hover:text-white text-2xl transition-colors leading-none">←</button>
           <div className="flex-1">
-            <h2 className="font-cinzel text-lg font-bold text-moon leading-none">
-              {step===1 ? 'Chi gioca stanotte?' : 'Scegli i ruoli'}
-            </h2>
-            <p className="text-gray-600 text-xs mt-0.5">Passo {step} di 2</p>
+            <h2 className="font-cinzel text-lg font-bold text-moon leading-none">{stepTitles[step - 1]}</h2>
+            <p className="text-gray-600 text-xs mt-0.5">Passo {step} di 3</p>
           </div>
-          <span className="font-cinzel text-xs text-gray-600">{step}/2</span>
+          <span className="font-cinzel text-xs text-gray-600">{step}/3</span>
         </div>
-        {/* Progress bar */}
         <div className="h-0.5 rounded-full w-full" style={{background:'rgba(255,255,255,0.07)'}}>
           <div className="h-full rounded-full transition-all duration-500"
-               style={{width: step===1 ? '50%' : '100%', background:'linear-gradient(90deg,#7a5c0e,#e2c97e)'}} />
+               style={{width: step === 1 ? '33%' : step === 2 ? '66%' : '100%',
+                       background:'linear-gradient(90deg,#7a5c0e,#e2c97e)'}} />
         </div>
       </div>
 
       <div className="px-4 pt-4">
 
         {/* ── STEP 1: Giocatori ── */}
-        {step===1 && (
-          <div className="anim-fade-up">
+        {step === 1 && (
+          <div className="anim-fade-up pb-32">
 
-            {/* Contatore grande */}
+            {/* Toggle: narratore gioca — SEMPRE IN CIMA */}
+            <div className="rounded-2xl px-4 py-4 mb-5"
+                 style={{background:'rgba(226,201,126,0.05)', border:`1px solid ${narratorPlays ? 'rgba(226,201,126,0.3)' : 'rgba(255,255,255,0.07)'}`}}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🎭</span>
+                  <div>
+                    <p className="text-white text-sm font-semibold">Partecipo anch'io</p>
+                    <p className="text-gray-600 text-xs">Il narratore gioca con un ruolo</p>
+                  </div>
+                </div>
+                <button onClick={() => setNarratorPlays(v => !v)}
+                  className="relative w-12 h-6 rounded-full transition-all flex-shrink-0"
+                  style={{background: narratorPlays ? 'rgba(226,201,126,0.5)' : 'rgba(255,255,255,0.1)',
+                          border: `1px solid ${narratorPlays ? 'rgba(226,201,126,0.6)' : 'rgba(255,255,255,0.15)'}`}}>
+                  <div className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all"
+                       style={{left: narratorPlays ? 'calc(100% - 22px)' : '2px',
+                               boxShadow:'0 1px 4px rgba(0,0,0,0.4)'}} />
+                </button>
+              </div>
+              {narratorPlays && (
+                <div className="mt-3">
+                  <input type="text" value={narratorName}
+                    onChange={e => setNarratorName(e.target.value)}
+                    placeholder="Il tuo nome…"
+                    className="w-full input-dark rounded-xl px-4 py-3 text-sm"/>
+                </div>
+              )}
+            </div>
+
+            {/* Counter — include il narratore se attivo */}
             <div className="text-center mb-6">
               <div className="inline-flex items-baseline gap-1">
-                <span className="font-cinzel text-6xl font-bold moon-glow">{validPlayers.length}</span>
-                <span className="font-cinzel text-2xl text-gray-600">/{Math.max(validPlayers.length,4)}</span>
+                <span className="font-cinzel text-6xl font-bold moon-glow">{rolesNeeded}</span>
+                <span className="font-cinzel text-2xl text-gray-600">/{Math.max(rolesNeeded, 4)}</span>
               </div>
               <p className="text-gray-600 text-xs mt-1 tracking-wider uppercase">
-                {validPlayers.length < 4 ? 'Aggiungi almeno 4 giocatori' : '✓ Pronti a iniziare'}
+                {rolesNeeded < 4 ? 'Aggiungi almeno 4 giocatori' : '✓ Pronti a iniziare'}
               </p>
             </div>
 
             {/* Lista giocatori */}
             <div className="flex flex-col gap-2 mb-4">
-              {players.map((name,i) => (
+              {/* Riga narratore (se gioca) — fissa in cima alla lista */}
+              {narratorActive && (
+                <div className="flex items-center gap-3 rounded-2xl px-3 py-3"
+                     style={{background:'rgba(226,201,126,0.07)', border:'1px solid rgba(226,201,126,0.25)'}}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-cinzel font-bold text-sm"
+                       style={{background:'rgba(226,201,126,0.15)', border:'1px solid rgba(226,201,126,0.4)', color:'#e2c97e'}}>
+                    🎭
+                  </div>
+                  <span className="flex-1 text-white text-sm font-semibold">{narratorName}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{background:'rgba(226,201,126,0.1)', border:'1px solid rgba(226,201,126,0.3)', color:'#e2c97e'}}>
+                    Narratore
+                  </span>
+                </div>
+              )}
+              {players.map((name, i) => (
                 <div key={i} className="flex items-center gap-3 rounded-2xl px-3 py-3"
                      style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
-                  {/* Avatar numerato */}
                   <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 font-cinzel font-bold text-sm"
                        style={{background:`hsl(${i*47+200},40%,22%)`, border:`1px solid hsl(${i*47+200},50%,35%)`, color:`hsl(${i*47+200},70%,70%)`}}>
-                    {i+1}
+                    {i + 1}
                   </div>
                   <input type="text" value={name}
-                    onChange={e=>setPlayerName(i,e.target.value)}
-                    placeholder={`Giocatore ${i+1}`}
+                    onChange={e => setPlayerName(i, e.target.value)}
+                    placeholder={`Giocatore ${i + 1}`}
                     className="flex-1 bg-transparent text-white text-sm outline-none placeholder-gray-600 font-semibold"/>
-                  <button onClick={()=>removePlayer(i)}
+                  <button onClick={() => removePlayer(i)}
                     className="w-7 h-7 rounded-full flex items-center justify-center text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-all text-sm">✕</button>
                 </div>
               ))}
             </div>
-
-            {/* Input aggiunta */}
             <div className="flex gap-2 mb-3">
               <input ref={inputRef} type="text" value={inputName}
-                onChange={e=>setInputName(e.target.value)}
-                onKeyDown={e=>e.key==='Enter'&&addPlayer()}
+                onChange={e => setInputName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addPlayer()}
                 placeholder="Nome giocatore…"
                 className="flex-1 input-dark rounded-2xl px-4 py-3.5 text-sm"/>
               <button onClick={addPlayer}
                 className="btn-gold w-12 rounded-2xl text-xl font-bold flex items-center justify-center">+</button>
             </div>
-
           </div>
         )}
 
-        {/* ── STEP 2: Ruoli ── */}
-        {step===2 && (
-          <div className="anim-fade-up pb-44">
+        {/* ── STEP 2: Lupi ── */}
+        {step === 2 && (
+          <div className="anim-fade-up flex flex-col items-center pt-6 px-2">
+            {/* Icona grande */}
+            <div className="text-7xl mb-5 leading-none"
+                 style={{filter:'drop-shadow(0 0 28px rgba(192,57,43,0.65))'}}>🐺</div>
 
-            {/* ── Stepper lupi + bilanciamento ── */}
-            <div className="rounded-2xl px-4 py-3 mb-5"
-                 style={{background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)'}}>
-              <div className="flex items-center gap-3">
-                <span className="font-bold text-white text-sm flex-1">🐺 Lupi nel villaggio</span>
-                <button
-                  onClick={() => setWolfCount(w => Math.max(1, w - 1))}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold transition-all active:scale-90"
-                  style={{background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.15)', color:'#fff'}}>
-                  −
-                </button>
-                <span className="font-cinzel text-2xl font-bold text-white w-6 text-center">{wolfCount}</span>
-                <button
-                  onClick={() => setWolfCount(w => Math.min(Math.max(1, Math.floor(rolesNeeded / 2)), w + 1))}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-lg font-bold transition-all active:scale-90"
-                  style={{background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.15)', color:'#fff'}}>
-                  +
-                </button>
-              </div>
-              {/* Bilanciamento inline */}
-              <p className={`text-[10px] font-bold mt-2 ${balanceVal > 3.5 ? 'text-red-400' : balanceVal < -3 ? 'text-yellow-400' : 'text-green-400'}`}>
-                {balanceVal > 3.5
-                  ? '⚠️ Lupi troppo forti — considera di ridurli'
-                  : balanceVal < -3
-                  ? '⚠️ Villaggio molto favorito — considera un lupo in più'
-                  : `✓ Bilanciato per ${rolesNeeded} giocatori`}
-              </p>
+            {/* Stepper grande */}
+            <div className="flex items-center gap-8 mb-6">
+              <button
+                onClick={() => setWolfCount(w => Math.max(1, w - 1))}
+                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all active:scale-90"
+                style={{background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.18)', color:'#fff'}}>
+                −
+              </button>
+              <span className="font-cinzel font-bold text-white leading-none"
+                    style={{fontSize: 72, minWidth: 64, textAlign:'center',
+                            textShadow:'0 0 24px rgba(226,201,126,0.45)'}}>
+                {wolfCount}
+              </span>
+              <button
+                onClick={() => setWolfCount(w => Math.min(Math.floor(rolesNeeded / 2), w + 1))}
+                className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold transition-all active:scale-90"
+                style={{background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.18)', color:'#fff'}}>
+                +
+              </button>
             </div>
 
-            {/* ── Ruoli speciali gratuiti ── */}
-            <p className="text-gray-600 text-xs uppercase tracking-wider mb-2">Ruoli speciali</p>
+            {/* Consiglio dinamico */}
+            <p className="text-sm font-bold mb-1 text-center" style={{color: wolfAdvice.color}}>
+              {wolfAdvice.text}
+            </p>
+            <p className="text-gray-600 text-xs text-center mb-8">
+              Consigliato: <span className="text-gray-400 font-semibold">
+                {recommended} {recommended === 1 ? 'lupo' : 'lupi'}
+              </span> per {rolesNeeded} giocatori
+            </p>
+
+            <div className="w-full h-px mb-6" style={{background:'rgba(255,255,255,0.06)'}} />
+
+            {/* Spiegazioni contestuali */}
+            <div className="w-full space-y-3 text-sm text-gray-500">
+              <p>🐺 I lupi si svegliano insieme ogni notte e scelgono una vittima.</p>
+              <p>⚖️ Più lupi rendono la partita più difficile per il villaggio.</p>
+              <p>🎯 Con {rolesNeeded} giocatori restano <span className="text-white font-semibold">{rolesNeeded - wolfCount}</span> posti per gli altri ruoli.</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 3: Ruoli ── */}
+        {step === 3 && (
+          <div className="anim-fade-up pb-60">
+
+            {/* Hint "fai tap" — scompare dopo 2.5s */}
+            <div className="text-center mb-4 transition-opacity duration-700"
+                 style={{opacity: showHint ? 1 : 0, pointerEvents:'none'}}>
+              <span className="text-xs font-semibold px-3 py-1.5 rounded-full"
+                    style={{background:'rgba(226,201,126,0.08)', border:'1px solid rgba(226,201,126,0.22)', color:'#e2c97e'}}>
+                👆 Fai tap sui personaggi per aggiungerli
+              </span>
+            </div>
+
+            {/* Counter posti */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-gray-500 text-xs">
+                🐺 {wolfCount} {wolfCount === 1 ? 'lupo' : 'lupi'} · {rolesNeeded - wolfCount} posti per altri ruoli
+              </p>
+              <span className={`text-xs font-bold ${spotsLeft === 0 ? 'text-green-400' : 'text-gray-600'}`}>
+                {spotsLeft === 0 ? '✓ Completo' : `${spotsLeft} liberi`}
+              </span>
+            </div>
+
+            {/* ── Ruoli base (villico + veggente + guardia) ── */}
+            <p className="text-gray-600 text-xs uppercase tracking-wider mb-2">Ruoli base</p>
             <div className="grid grid-cols-3 gap-2.5 mb-5">
               {Object.values(ROLES)
-                .filter(r => !r.pack && r.category === 'speciale')
+                .filter(r => !r.pack && r.id !== 'lupo')
                 .map(r => (
                   <RoleCardC key={r.id} r={r}
                     count={roleCount[r.id] || 0}
                     onAdd={() => addRole(r.id)}
-                    onRemove={() => removeLastRole(r.id)}
                     onInfo={() => setPreviewRole(r.id)}
-                    unlocked={true} />
+                    unlocked={true}
+                    disabled={spotsFull} />
                 ))}
             </div>
 
             {/* ── Pack ruoli (collassabili) ── */}
-            {['ombre','villaggio'].map(packId => {
+            {['ombre', 'villaggio'].map(packId => {
               const pack = PACKS[packId];
               if (!pack || pack.roles.length === 0) return null;
               const unlocked = purchasedPacks.includes(pack.id);
@@ -2500,7 +2603,6 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                 <div key={packId} className="rounded-2xl overflow-hidden mb-3"
                      style={{border:`1px solid ${pack.color}${unlocked ? '44' : '22'}`,
                              background: unlocked ? `${pack.color}07` : 'rgba(255,255,255,0.02)'}}>
-                  {/* Header collassabile */}
                   <button
                     className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all active:opacity-75"
                     style={{background:`${pack.color}${unlocked ? '14' : '09'}`}}
@@ -2512,9 +2614,7 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                     </div>
                     {unlocked ? (
                       <span className="text-[10px] text-green-400 font-bold shrink-0 px-2 py-1 rounded-full"
-                            style={{background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.25)'}}>
-                        ✓
-                      </span>
+                            style={{background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.25)'}}>✓</span>
                     ) : (
                       <span className="text-[10px] font-bold shrink-0 px-2 py-1 rounded-full"
                             style={{background:`${pack.color}20`, border:`1px solid ${pack.color}44`, color:pack.color}}>
@@ -2523,8 +2623,6 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                     )}
                     <span className="text-gray-600 text-sm ml-1 shrink-0">{expanded ? '↑' : '↓'}</span>
                   </button>
-
-                  {/* Griglia ruoli (visibile solo se espanso) */}
                   {expanded && (
                     <div className="grid grid-cols-3 gap-2.5 p-3">
                       {pack.roles.map(rid => {
@@ -2533,9 +2631,9 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                           <RoleCardC key={rid} r={r}
                             count={roleCount[rid] || 0}
                             onAdd={() => unlocked ? addRole(rid) : setPaywallPack(packId)}
-                            onRemove={() => removeLastRole(rid)}
                             onInfo={() => setPreviewRole(rid)}
-                            unlocked={unlocked} />
+                            unlocked={unlocked}
+                            disabled={unlocked ? spotsFull : false} />
                         );
                       })}
                     </div>
@@ -2544,7 +2642,7 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
               );
             })}
 
-            {/* ── Pack Narratore — riga singola ── */}
+            {/* ── Pack Narratore ── */}
             {!purchasedPacks.includes('narratore') && (
               <button
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-3 text-left transition-all active:opacity-75"
@@ -2562,7 +2660,7 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
               </button>
             )}
 
-            {/* ── Combo card ── */}
+            {/* ── Combo ── */}
             {!PACKS.combo.includes.every(id => purchasedPacks.includes(id)) && (
               <button
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-3 text-left transition-all active:opacity-75"
@@ -2580,18 +2678,79 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
               </button>
             )}
 
-            {/* ── Modal info ruolo (invariato) ── */}
+            {/* ── Ruoli attuali — griglia 3 per riga (lupi inclusi) ── */}
+            {(wolfCount > 0 || roles.length > 0) && (
+              <div className="mt-5">
+                <p className="text-gray-600 text-xs uppercase tracking-wider mb-2">Ruoli attuali</p>
+                <div className="grid grid-cols-3 gap-2">
+
+                  {/* Card Lupi — sempre presente */}
+                  <div className="rounded-2xl flex flex-col items-center py-2.5 px-1 gap-1"
+                       style={{background:'rgba(192,57,43,0.22)', border:'1px solid rgba(192,57,43,0.55)'}}>
+                    <span className="text-xl leading-none">🐺</span>
+                    <span className="text-[10px] font-bold text-white text-center leading-tight">Lupo</span>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <button
+                        onClick={() => setWolfCount(w => Math.max(1, w - 1))}
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold transition-all active:scale-90"
+                        style={{background:'rgba(255,255,255,0.1)', color:'#fff'}}>
+                        −
+                      </button>
+                      <span className="text-white text-xs font-bold w-4 text-center">{wolfCount}</span>
+                      <button
+                        onClick={() => setWolfCount(w => Math.min(Math.floor(rolesNeeded / 2), w + 1))}
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold transition-all active:scale-90"
+                        style={{background:'rgba(255,255,255,0.1)', color:'#fff'}}>
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card altri ruoli */}
+                  {Object.entries(roleCount).map(([rid, cnt]) => {
+                    const r = ROLES[rid]; if (!r) return null;
+                    return (
+                      <div key={rid} className="rounded-2xl flex flex-col items-center py-2.5 px-1 gap-1"
+                           style={{background:`${r.color}28`, border:`1px solid ${r.color}66`}}>
+                        <span className="text-xl leading-none">{r.icon}</span>
+                        <span className="text-[10px] font-bold text-white text-center leading-tight w-full px-0.5"
+                              style={{wordBreak:'break-word'}}>{r.name}</span>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <button
+                            onClick={() => removeLastRole(rid)}
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold transition-all active:scale-90"
+                            style={{background:'rgba(255,255,255,0.1)', color:'#fff'}}>
+                            −
+                          </button>
+                          <span className="text-white text-xs font-bold w-4 text-center">{cnt}</span>
+                          <button
+                            onClick={() => addRole(rid)}
+                            disabled={spotsFull}
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold transition-all active:scale-90"
+                            style={{background: spotsFull ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.1)',
+                                    color: spotsFull ? '#444' : '#fff'}}>
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Modal info ruolo */}
             {previewRole && (() => {
               const r = ROLES[previewRole];
               const vis = ROLE_VISUALS[previewRole];
               if (!r) return null;
               return (
-                <div className="fixed inset-0 z-50 flex items-end justify-center p-4"
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
                      style={{background:'rgba(0,0,0,0.75)', backdropFilter:'blur(4px)'}}
-                     onClick={()=>setPreviewRole(null)}>
+                     onClick={() => setPreviewRole(null)}>
                   <div className="w-full max-w-sm rounded-2xl p-5 anim-fade-up"
                        style={{background: vis ? vis.gradient : '#0d1117', border:`1px solid ${r.color}44`}}
-                       onClick={e=>e.stopPropagation()}>
+                       onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <span className="text-4xl" style={{filter: vis ? `drop-shadow(0 0 12px ${vis.glow})` : 'none'}}>{r.icon}</span>
@@ -2599,11 +2758,11 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                           <p className="font-cinzel text-white font-bold text-lg leading-tight">{r.name}</p>
                           <span className="text-[10px] px-2 py-0.5 rounded-full"
                                 style={{background:r.color+'33', border:`1px solid ${r.color}55`, color:r.color}}>
-                            {r.team==='lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
+                            {r.team === 'lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
                           </span>
                         </div>
                       </div>
-                      <button onClick={()=>setPreviewRole(null)}
+                      <button onClick={() => setPreviewRole(null)}
                               className="text-gray-500 hover:text-white text-xl leading-none px-1">✕</button>
                     </div>
                     <p className="text-gray-300 text-sm leading-relaxed mb-3">{r.description}</p>
@@ -2615,14 +2774,19 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                     )}
                     {isUnlocked(r.id) ? (
                       <button
-                        onClick={()=>{ addRole(r.id); setPreviewRole(null); }}
+                        onClick={() => { if (!spotsFull) { addRole(r.id); setPreviewRole(null); } }}
+                        disabled={spotsFull}
                         className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
-                        style={{background:r.color+'33', border:`1px solid ${r.color}66`, color:'white'}}>
-                        + Aggiungi {r.name}
+                        style={{
+                          background: spotsFull ? 'rgba(255,255,255,0.05)' : r.color+'33',
+                          border:`1px solid ${spotsFull ? 'rgba(255,255,255,0.1)' : r.color+'66'}`,
+                          color: spotsFull ? '#555' : 'white'
+                        }}>
+                        {spotsFull ? 'Nessun posto libero' : `+ Aggiungi ${r.name}`}
                       </button>
                     ) : (
                       <button
-                        onClick={()=>{ setPreviewRole(null); setPaywallPack(r.pack); }}
+                        onClick={() => { setPreviewRole(null); setPaywallPack(r.pack); }}
                         className="w-full py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
                         style={{background:'rgba(226,201,126,0.12)', border:'1px solid rgba(226,201,126,0.3)', color:'#e2c97e'}}>
                         🔒 Sblocca {PACKS[r.pack]?.name}
@@ -2632,86 +2796,59 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                 </div>
               );
             })()}
-
           </div>
         )}
       </div>
 
-      {/* Fixed bottom CTA — step 1 */}
-      {step===1 && (
+      {/* ── Fixed bottom: Step 1 ── */}
+      {step === 1 && (
         <div className="fixed bottom-0 left-0 right-0 p-4"
              style={{background:'linear-gradient(to top, rgba(13,17,23,1) 65%, transparent)'}}>
           <button
-            onClick={()=>{
-              if (canStep1) {
-                // preset wolfCount e ruoli speciali al primo ingresso
-                const n = validPlayers.length;
-                const presets = {
-                  4:  { wolves:1, spec:['veggente'] },
-                  5:  { wolves:1, spec:['veggente','guardia'] },
-                  6:  { wolves:2, spec:['veggente','guardia'] },
-                  7:  { wolves:2, spec:['veggente','guardia'] },
-                  8:  { wolves:2, spec:['veggente','guardia'] },
-                  9:  { wolves:3, spec:['veggente','guardia'] },
-                  10: { wolves:3, spec:['veggente','guardia'] },
-                };
-                const p = presets[n] || presets[10];
-                setWolfCount(p.wolves);
-                if (roles.length === 0) setRoles(p.spec);
-                setStep(2);
-              }
-            }}
+            onClick={() => { if (canStep1) setStep(2); }}
             disabled={!canStep1}
+            className="btn-gold w-full py-4 rounded-2xl text-base">
+            → Continua
+          </button>
+        </div>
+      )}
+
+      {/* ── Fixed bottom: Step 2 ── */}
+      {step === 2 && (
+        <div className="fixed bottom-0 left-0 right-0 p-4"
+             style={{background:'linear-gradient(to top, rgba(13,17,23,1) 65%, transparent)'}}>
+          <button
+            onClick={() => setStep(3)}
             className="btn-gold w-full py-4 rounded-2xl text-base">
             → Scegli i Ruoli
           </button>
         </div>
       )}
 
-      {/* Fixed bottom CTA — step 2: composizione + avvio */}
-      {step===2 && (
-        <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-5"
-             style={{background:'linear-gradient(to top, rgba(13,17,23,1) 70%, transparent)'}}>
-          {/* Composizione attuale */}
-          <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
-            <span className="text-[10px] px-2 py-1 rounded-full font-bold"
-                  style={{background:'rgba(192,57,43,0.2)', border:'1px solid rgba(192,57,43,0.4)', color:'#ef4444'}}>
-              🐺 ×{wolfCount}
+      {/* ── Fixed bottom: Step 3 — counter + CTA ── */}
+      {step === 3 && (
+        <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-6"
+             style={{background:'linear-gradient(to top, rgba(13,17,23,1) 75%, transparent)'}}>
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-gray-600 text-xs">🐺 ×{wolfCount} · {wolfCount + roles.length}/{rolesNeeded}</span>
+            <span className={`text-xs font-bold ${spotsLeft === 0 ? 'text-green-400' : 'text-gray-500'}`}>
+              {spotsLeft === 0 ? '✓ Tutti assegnati' : `${spotsLeft} posti liberi`}
             </span>
-            {Object.entries(roleCount).map(([rid, cnt]) => {
-              if (!cnt) return null;
-              const r = ROLES[rid]; if (!r) return null;
-              return (
-                <span key={rid} className="text-[10px] px-2 py-1 rounded-full font-bold"
-                      style={{background:`${r.color}22`, border:`1px solid ${r.color}55`, color:r.color}}>
-                  {r.icon} ×{cnt}
-                </span>
-              );
-            })}
-            {villiciAuto > 0 && (
-              <span className="text-[10px] px-2 py-1 rounded-full font-bold"
-                    style={{background:'rgba(39,174,96,0.12)', border:'1px solid rgba(39,174,96,0.3)', color:'#4ade80'}}>
-                🧑‍🌾 ×{villiciAuto} auto
-              </span>
-            )}
-            {wolfCount + roles.length > rolesNeeded && (
-              <span className="text-[10px] px-2 py-1 rounded-full font-bold text-red-400">
-                ⚠️ troppi di {wolfCount + roles.length - rolesNeeded}
-              </span>
-            )}
           </div>
           <button
-            onClick={()=>{
+            onClick={() => {
               if (!rolesOk) return;
-              const finalRoles = [
-                ...Array(wolfCount).fill('lupo'),
-                ...roles,
-                ...Array(villiciAuto).fill('villico'),
-              ];
-              const vp = validPlayers.map(n=>({id:uid(6), name:n}));
+              const finalRoles = [...Array(wolfCount).fill('lupo'), ...roles];
+              // Costruisci lista giocatori: prima i giocatori normali, poi il narratore (se gioca)
+              const allNames = [...validPlayers];
+              if (narratorActive) allNames.push(narratorName.trim());
+              const vp = allNames.map((n, idx) => ({
+                id: uid(6), name: n,
+                ...(narratorActive && idx === allNames.length - 1 ? {isNarrator: true} : {})
+              }));
               const shuffledRoles = shuffleArray(finalRoles);
-              const withRoles = vp.map((p,i)=>({...p, role:shuffledRoles[i], alive:true, ready:false}));
-              onStart(withRoles, uid(6));
+              const withRoles = vp.map((p, i) => ({...p, role: shuffledRoles[i], alive: true, ready: false}));
+              onStart(withRoles, uid(6), narratorActive ? narratorName.trim() : null);
             }}
             disabled={!rolesOk}
             className="btn-gold w-full py-4 rounded-2xl text-base">
@@ -2733,7 +2870,7 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
 /* ================================================================
    GAME MASTER SCREEN
    ================================================================ */
-function GameMasterScreen({gameId, players, onEndGame, onBack}) {
+function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) {
   const [phase, setPhase] = useState('waiting');
   const [nightStep, setNightStep] = useState(0);
   const [dayNum, setDayNum] = useState(1);
@@ -2767,6 +2904,8 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
   const [ttsMode, setTtsMode] = useState(() => localStorage.getItem('lif_tts_mode') || 'script');
   const [dayTimerMins, setDayTimerMins] = useState(() => parseInt(localStorage.getItem('lif_day_timer') || '5'));
   const [votePrompt, setVotePrompt] = useState(false); // sollecito votazione
+  const [showMyCard, setShowMyCard] = useState(false); // narratore vede la sua scheda personaggio
+  const [narratorLocalVote, setNarratorLocalVote] = useState(null); // voto locale del narratore-giocatore
   const eventLogRef = useRef([]); // log eventi per il recap finale (ref = no stale closure)
 
   const toggleTtsMode = () => {
@@ -2824,6 +2963,9 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
       setVotePrompt(false);
     }
   }, [phase, timer, timerOn]);
+
+  // Reset voto locale del narratore-giocatore a ogni cambio fase o turno notturno
+  useEffect(() => { setNarratorLocalVote(null); }, [phase, gameData?.currentNightStep?.key]);
 
   const [alfaMark, setAlfaMark] = useState(null);        // id del giocatore marcato dal Lupo Alfa
   const [mitomaneTarget, setMitomaneTarget] = useState(null); // id del giocatore imitato dal Mitomane
@@ -3372,7 +3514,19 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
       {/* Header */}
       <div className="sticky top-0 z-10 flex items-center gap-3 px-4 pt-5 pb-3"
            style={{background: phase==='night'||phase==='role_reveal'||phase==='waiting' ? 'rgba(10,5,25,0.95)' : phase==='dawn_reveal' ? 'rgba(25,10,0,0.95)' : 'rgba(15,10,0,0.95)', backdropFilter:'blur(10px)', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-        <button onClick={onBack} className="text-gray-500 hover:text-white text-2xl leading-none transition-colors">←</button>
+        <button onClick={() => {
+          if (phase === 'waiting' && onBackToCreate) {
+            db?.ref(`games/${gameId}`).remove().catch(()=>{});
+            const narratorP = players.find(p => p.isNarrator);
+            onBackToCreate({
+              playerNames: players.filter(p => !p.isNarrator).map(p => p.name),
+              wolfCount: players.filter(p => p.role === 'lupo').length,
+              allRoles: players.map(p => p.role).filter(r => r !== 'lupo'),
+              initialStep: 3,
+              narratorName: narratorP ? narratorP.name : null,
+            });
+          } else { onBack(); }
+        }} className="text-gray-500 hover:text-white text-2xl leading-none transition-colors">←</button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h2 className="font-cinzel text-moon font-bold text-base leading-none truncate">Narratore</h2>
@@ -4023,10 +4177,12 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
 
             {/* Rivincita rapida */}
             <button onClick={()=>{
+                const narratorP = players.find(p => p.isNarrator);
                 const setup = {
-                  playerNames: players.map(p => p.name),
+                  playerNames: players.filter(p => !p.isNarrator).map(p => p.name),
                   wolfCount: players.filter(p => p.role === 'lupo').length,
-                  specialRoles: players.map(p => p.role).filter(r => r !== 'lupo' && r !== 'villico'),
+                  allRoles: players.map(p => p.role).filter(r => r !== 'lupo'),
+                  narratorName: narratorP ? narratorP.name : null,
                 };
                 onEndGame({ winner, gameId, date:new Date().toISOString(), players:Object.values(pStates) }, setup);
               }}
@@ -4164,6 +4320,182 @@ function GameMasterScreen({gameId, players, onEndGame, onBack}) {
           </div>
         </div>
       )}
+
+      {/* ===== BOTTONE 🎭 "La mia scheda" (solo se narratore gioca) ===== */}
+      {(() => {
+        const narratorP = Object.values(pStates).find(p => p.isNarrator);
+        if (!narratorP || phase === 'waiting') return null;
+        const myRole = ROLES[narratorP.role];
+        return (
+          <>
+            {/* FAB fisso bottom-right */}
+            <button
+              onClick={() => setShowMyCard(true)}
+              className="fixed bottom-24 right-4 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full transition-all active:scale-95 shadow-lg"
+              style={{background:'rgba(13,17,23,0.95)', border:`1px solid ${myRole?.color || '#e2c97e'}55`,
+                      boxShadow:`0 0 16px ${myRole?.color || '#e2c97e'}22`}}>
+              <span className="text-lg leading-none">{myRole?.icon || '🎭'}</span>
+              <span className="text-xs font-bold" style={{color: myRole?.color || '#e2c97e'}}>
+                Il mio ruolo
+              </span>
+            </button>
+
+            {/* Overlay scheda personaggio — NESSUN LOG VISIBILE */}
+            {showMyCard && (
+              <div className="fixed inset-0 z-50 flex flex-col"
+                   style={{background:'#0b0a14'}}>
+                {/* Header */}
+                <div className="flex items-center gap-3 px-4 pt-safe pt-5 pb-4"
+                     style={{background:'rgba(13,17,23,0.97)', borderBottom:'1px solid rgba(255,255,255,0.06)'}}>
+                  <button onClick={() => setShowMyCard(false)}
+                    className="text-gray-500 hover:text-white text-2xl leading-none transition-colors">←</button>
+                  <div className="flex-1">
+                    <h2 className="font-cinzel text-moon font-bold text-base leading-none">La mia scheda</h2>
+                    <p className="text-gray-600 text-xs mt-0.5">{narratorP.name}</p>
+                  </div>
+                  {/* Stato vita */}
+                  <span className={`text-xs font-bold px-3 py-1 rounded-full ${narratorP.alive ? 'text-green-400' : 'text-red-400'}`}
+                        style={{background: narratorP.alive ? 'rgba(74,222,128,0.1)' : 'rgba(248,113,113,0.1)',
+                                border: `1px solid ${narratorP.alive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`}}>
+                    {narratorP.alive ? '● Vivo' : '✕ Eliminato'}
+                  </span>
+                </div>
+
+                {/* Contenuto — solo la scheda ruolo */}
+                <div className="flex-1 overflow-y-auto px-4 py-6 flex flex-col items-center">
+                  {/* Card ruolo grande */}
+                  <div className="w-full max-w-sm rounded-3xl p-6 mb-6"
+                       style={{background:`linear-gradient(145deg, ${myRole?.color || '#333'}18, ${myRole?.color || '#333'}08)`,
+                               border:`1px solid ${myRole?.color || '#555'}44`,
+                               boxShadow:`0 0 40px ${myRole?.color || '#333'}15`}}>
+                    <div className="text-center mb-5">
+                      <div className="text-7xl mb-3 leading-none"
+                           style={{filter:`drop-shadow(0 0 20px ${myRole?.color || '#fff'}66)`}}>
+                        {myRole?.icon || '❓'}
+                      </div>
+                      <h3 className="font-cinzel text-white font-bold text-2xl mb-1">{myRole?.name || '—'}</h3>
+                      <span className="text-xs px-3 py-1 rounded-full font-bold"
+                            style={{background:`${myRole?.color || '#555'}22`,
+                                    border:`1px solid ${myRole?.color || '#555'}55`,
+                                    color: myRole?.color || '#aaa'}}>
+                        {myRole?.team === 'lupi' ? '⚔️ Lupi' : '🌾 Villaggio'}
+                      </span>
+                    </div>
+                    <p className="text-gray-300 text-sm leading-relaxed text-center">{myRole?.description}</p>
+                    {myRole?.tip && (
+                      <div className="mt-4 p-3 rounded-xl text-xs text-white/40 italic text-center"
+                           style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)'}}>
+                        💡 {myRole.tip}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fase attuale — info minima */}
+                  <div className="w-full max-w-sm rounded-2xl px-4 py-3 text-center mb-4"
+                       style={{background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)'}}>
+                    <p className="text-gray-500 text-xs">Fase attuale</p>
+                    <p className="text-white text-sm font-semibold mt-0.5 font-cinzel capitalize">
+                      {phase === 'night' ? '🌙 Notte' : phase === 'day' ? '☀️ Giorno' : phase === 'voting' ? '🗳️ Votazione' : phase === 'dawn_reveal' ? '🌅 Alba' : phase === 'role_reveal' ? '🎭 Scoperta ruoli' : '⏳ ' + phase}
+                    </p>
+                  </div>
+
+                  {/* ── AZIONE NOTTE: vota se è il proprio turno ── */}
+                  {narratorP.alive && phase === 'night' && gameData?.currentNightStep?.roleId === narratorP.role && (() => {
+                    const myVote = narratorLocalVote || gameData?.nightVotes?.[narratorP.id];
+                    const castNarratorNightVote = (targetId) => {
+                      if (narratorLocalVote || gameData?.nightVotes?.[narratorP.id]) return;
+                      window.haptic('select');
+                      setNarratorLocalVote(targetId);
+                      db.ref(`games/${gameId}/nightVotes/${narratorP.id}`).set(targetId);
+                    };
+                    if (myVote) {
+                      return (
+                        <div className="w-full max-w-sm rounded-2xl px-4 py-4 text-center mb-4"
+                             style={{background:`${myRole?.color || '#555'}18`, border:`1px solid ${myRole?.color || '#555'}44`}}>
+                          <p className="text-white text-sm font-bold">✓ Voto inviato</p>
+                          <p className="text-gray-500 text-xs mt-1">In attesa che il narratore avanzi…</p>
+                        </div>
+                      );
+                    }
+                    const alivePlayers = Object.entries(gameData?.players || {}).filter(([id, p]) => p.alive && id !== narratorP.id);
+                    return (
+                      <div className="w-full max-w-sm mb-4">
+                        <div className="rounded-2xl p-4 mb-3"
+                             style={{background:`${myRole?.color || '#555'}18`, border:`1px solid ${myRole?.color || '#555'}44`}}>
+                          <p className="font-cinzel font-bold text-white text-sm mb-1">
+                            <span className="text-lg mr-1">{myRole?.icon}</span> È il tuo turno!
+                          </p>
+                          <p className="text-gray-400 text-xs">Scegli in silenzio:</p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {alivePlayers.map(([id, p]) => (
+                            <button key={id}
+                              onClick={() => castNarratorNightVote(id)}
+                              className="w-full p-4 rounded-2xl flex justify-between items-center bg-white/10 touch-manipulation transition-all active:scale-95 shadow-lg"
+                              style={{border:`2px solid rgba(255,255,255,0.2)`, pointerEvents:'auto', zIndex:999}}>
+                              <span className="font-bold text-white text-xl pr-4">{p.name}</span>
+                              <div className="w-10 h-10 rounded-full border-2 border-white/40"></div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── AZIONE GIORNO: vota durante la votazione ── */}
+                  {narratorP.alive && phase === 'voting' && (() => {
+                    const myDayVote = narratorLocalVote || gameData?.dayVotes?.[narratorP.id];
+                    const castNarratorDayVote = (targetId) => {
+                      window.haptic('select');
+                      setNarratorLocalVote(targetId);
+                      db.ref(`games/${gameId}/dayVotes/${narratorP.id}`).set(targetId);
+                    };
+                    const alivePlayers = Object.entries(gameData?.players || {}).filter(([id, p]) => p.alive && id !== narratorP.id);
+                    return (
+                      <div className="w-full max-w-sm mb-4">
+                        <div className="rounded-2xl p-4 mb-3"
+                             style={{background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.35)'}}>
+                          <p className="font-cinzel font-bold text-white text-sm mb-1">🗳️ Vota chi condannare</p>
+                          <p className="text-gray-400 text-xs">Tocca un giocatore per votarlo:</p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                          {alivePlayers.map(([id, p]) => {
+                            const isSel = myDayVote === id;
+                            return (
+                              <button key={id}
+                                onClick={() => castNarratorDayVote(id)}
+                                className={`w-full p-4 rounded-2xl flex justify-between items-center touch-manipulation transition-all active:scale-95 shadow-lg ${isSel ? 'bg-white/40 scale-[1.02]' : 'bg-white/10'}`}
+                                style={{border: isSel ? '4px solid #ef4444' : '3px solid rgba(255,255,255,0.2)',
+                                        boxShadow: isSel ? '0 0 35px rgba(239,68,68,0.7)' : 'none',
+                                        pointerEvents:'auto', zIndex:999}}>
+                                <span className="font-bold text-white text-xl pr-4">{p.name}</span>
+                                {isSel ? <span className="text-3xl">🔥</span> : <div className="w-10 h-10 rounded-full border-2 border-white/40"></div>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  <p className="text-gray-700 text-xs mt-2 text-center italic">
+                    Il log della partita non è visibile in questa schermata.
+                  </p>
+                </div>
+
+                {/* Bottone torna */}
+                <div className="px-4 pb-safe pb-6 pt-3"
+                     style={{background:'rgba(13,17,23,0.97)', borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+                  <button onClick={() => setShowMyCard(false)}
+                    className="btn-gold w-full py-4 rounded-2xl text-base">
+                    ← Torna al pannello narratore
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -4189,6 +4521,13 @@ function PlayerScreen({gameId, playerId}) {
     setDebugLog(prev => (msg + '\n' + prev).substring(0, 200));
   };
 
+  // Salva sessione per recupero (se chiude per sbaglio)
+  useEffect(() => {
+    if (gameId && playerId) {
+      localStorage.setItem('lif_rejoin', JSON.stringify({ gameId, playerId, savedAt: Date.now() }));
+    }
+  }, [gameId, playerId]);
+
   useEffect(()=>{
     if(!gameId || !playerId) { setError('Link non valido'); return; }
     if(!db){
@@ -4196,7 +4535,7 @@ function PlayerScreen({gameId, playerId}) {
       setGameData({ phase:'role_reveal', players:{ [playerId]:{ name:'Giocatore', role:'villico', alive:true, ready:false } } });
       return;
     }
-    
+
     // Genera token dispositivo se non esiste
     let deviceToken = localStorage.getItem('lif_device_token');
     if(!deviceToken) {
@@ -4228,6 +4567,7 @@ function PlayerScreen({gameId, playerId}) {
   const markReady = ()=>{
     if(markedReady) return;
     setMarkedReady(true);
+    window.haptic('medium');
     if(db && gameId && playerId) {
       db.ref(`games/${gameId}/players/${playerId}/ready`).set(true);
       window.playSfx('night'); // Unlock audio context
@@ -4246,6 +4586,7 @@ function PlayerScreen({gameId, playerId}) {
       contextLog('Voto respinto: ' + (!player?.alive ? 'morto' : 'fase errata ('+phase+')'));
       return;
     }
+    window.haptic('select');
     setLocalVote(targetId);
     db.ref(`games/${gameId}/nightVotes/${playerId}`).set(targetId)
       .then(()=>contextLog('Voto salvato su FB!'))
@@ -4255,6 +4596,7 @@ function PlayerScreen({gameId, playerId}) {
   const castDayVote = (targetId) => {
     contextLog('Tentativo voto giorno -> ' + targetId);
     if(!db || !gameId || !playerId || !player?.alive || phase!=='voting') return;
+    window.haptic('select');
     setLocalVote(targetId);
     db.ref(`games/${gameId}/dayVotes/${playerId}`).set(targetId);
   };
@@ -4263,6 +4605,34 @@ function PlayerScreen({gameId, playerId}) {
   useEffect(() => {
     setLocalVote(null);
   }, [phase, gameData?.currentNightStep?.key]);
+
+  // Pulisce il rejoin salvato quando la partita termina
+  useEffect(() => {
+    if (phase === 'ended') localStorage.removeItem('lif_rejoin');
+  }, [phase]);
+
+  // Haptic su cambio fase — feedback tattile contestuale
+  const prevPhaseRef = useRef(null);
+  useEffect(() => {
+    if (!phase || phase === prevPhaseRef.current) return;
+    const prev = prevPhaseRef.current;
+    prevPhaseRef.current = phase;
+    if (!prev) return; // primo render, nessun feedback
+    if (phase === 'night')        window.haptic('heavy');   // cala la notte
+    if (phase === 'dawn_reveal')  window.haptic('medium');  // alba
+    if (phase === 'voting')       window.haptic('medium');  // inizia la votazione
+    if (phase === 'ended_voting') {
+      // Condannato? Feedback più forte per la vittima
+      const isVictim = gameData?.dayVictimId === playerId;
+      window.haptic(isVictim ? 'error' : 'warning');
+    }
+    if (phase === 'ended') {
+      const w = gameData?.winner;
+      const myTeam = player?.role ? ROLES[player.role]?.team : null;
+      const won = (w === 'lupi' && myTeam === 'lupi') || (w === 'villaggio' && myTeam === 'villaggio');
+      window.haptic(won ? 'success' : 'error');
+    }
+  }, [phase]);
 
   if(error) return (
     <div className="min-h-screen layer flex flex-col items-center justify-center p-6 text-center">
@@ -4299,10 +4669,10 @@ function PlayerScreen({gameId, playerId}) {
   const deepLinkUrl = `lupus://join?game=${gameId}&player=${playerId}`;
 
   return (
-    <div className={`min-h-screen layer screen-safe px-4 py-6 pb-44 ${phaseDisplay.bg}`} style={{ pointerEvents: 'auto' }}>
+    <div className={`min-h-screen layer screen-safe px-4 pb-44 ${(phase === 'role_reveal' || phase === 'waiting') ? 'pt-3' : 'py-6'} ${phaseDisplay.bg}`} style={{ pointerEvents: 'auto' }}>
 
-      {/* Banner "Apri/Scarica l'App" — visibile solo su browser, nascosto nell'app nativa */}
-      {!isNativePlatform && (
+      {/* Banner "Apri/Scarica l'App" — visibile solo su browser, nascosto nell'app nativa e durante la scoperta del ruolo */}
+      {!isNativePlatform && phase !== 'role_reveal' && phase !== 'waiting' && (
         <div className="mb-4 rounded-2xl flex items-center gap-3 px-4 py-3"
              style={{background:'rgba(226,201,126,0.06)', border:'1px solid rgba(226,201,126,0.2)'}}>
           <span className="text-2xl shrink-0">🐺</span>
@@ -4350,7 +4720,7 @@ function PlayerScreen({gameId, playerId}) {
       )}
 
       {/* Phase banner */}
-      <div className="text-center mb-4">
+      <div className={`text-center ${(phase === 'role_reveal' || phase === 'waiting') ? 'mb-2' : 'mb-4'}`}>
         <div className="text-4xl mb-1">{phaseDisplay.icon}</div>
         <p className="font-cinzel text-moon text-base font-semibold">{phaseDisplay.label}</p>
         {phaseDisplay.tip && <p className="text-gray-600 text-xs mt-1">{phaseDisplay.tip}</p>}
@@ -4362,7 +4732,7 @@ function PlayerScreen({gameId, playerId}) {
         <div className="mb-5">
           <RoleCard
             role={player.role} playerName={player.name}
-            flipped={flipped} onFlip={()=>setFlipped(true)}
+            flipped={flipped} onFlip={()=>{ window.haptic('heavy'); setFlipped(true); }}
             userPhoto={user?.photoURL}
           />
         </div>
@@ -5190,6 +5560,7 @@ function App() {
   const [playerId, setPlayerId] = useState(null);
   const [showSetup, setShowSetup] = useState(false);
   const [lastGameSetup, setLastGameSetup] = useState(null);
+  const [rejoinInfo, setRejoinInfo] = useState(null); // {gameId, playerId, playerName}
 
   // Helper: naviga al PlayerScreen dai parametri game+player
   const openPlayerScreen = useCallback((g, p) => {
@@ -5209,6 +5580,32 @@ function App() {
     const g = params.get('game');
     const p = params.get('player');
     if(g && p){ openPlayerScreen(g, p); return; }
+
+    // 2b) Controlla sessione salvata per recupero (chiusura accidentale)
+    try {
+      const saved = localStorage.getItem('lif_rejoin');
+      if (saved) {
+        const { gameId: sg, playerId: sp, savedAt } = JSON.parse(saved);
+        const age = Date.now() - (savedAt || 0);
+        if (sg && sp && age < 12 * 60 * 60 * 1000) { // valida 12 ore
+          if (db) {
+            db.ref(`games/${sg}/phase`).once('value').then(snap => {
+              const ph = snap.val();
+              if (ph && ph !== 'ended') {
+                // Recupera anche il nome del giocatore
+                db.ref(`games/${sg}/players/${sp}/name`).once('value').then(ns => {
+                  setRejoinInfo({ gameId: sg, playerId: sp, playerName: ns.val() || '?' });
+                });
+              } else {
+                localStorage.removeItem('lif_rejoin');
+              }
+            }).catch(() => {});
+          }
+        } else {
+          localStorage.removeItem('lif_rejoin');
+        }
+      }
+    } catch(e) { localStorage.removeItem('lif_rejoin'); }
 
     // 2) Native app: gestisci deep link lupus://join?game=XXX&player=YYY
     const setupDeepLink = async () => {
@@ -5306,12 +5703,44 @@ function App() {
       {!privacyAccepted && <PrivacyConsentModal onAccept={handlePrivacyAccept} />}
 
       {screen==='home' && (
-        <HomeScreen
-          onCreateGame={()=>setScreen('create')}
-          onViewHistory={()=>setScreen('history')}
-          onSetup={()=>setShowSetup(true)}
-          onProfile={()=>setScreen('profile')}
-        />
+        <>
+          <HomeScreen
+            onCreateGame={()=>setScreen('create')}
+            onViewHistory={()=>setScreen('history')}
+            onSetup={()=>setShowSetup(true)}
+            onProfile={()=>setScreen('profile')}
+          />
+          {/* Banner recupero sessione — appare se il giocatore aveva una partita aperta */}
+          {rejoinInfo && (
+            <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-6 pt-3"
+                 style={{background:'linear-gradient(to top, rgba(11,10,20,1) 60%, transparent)'}}>
+              <div className="rounded-2xl px-4 py-4"
+                   style={{background:'rgba(185,28,28,0.12)', border:'1px solid rgba(185,28,28,0.4)',
+                           boxShadow:'0 0 24px rgba(185,28,28,0.15)'}}>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-2xl">🔴</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-sm font-bold leading-tight">Partita in corso!</p>
+                    <p className="text-gray-400 text-xs mt-0.5">
+                      Eri connesso come <span className="text-white font-semibold">{rejoinInfo.playerName}</span>
+                    </p>
+                  </div>
+                  <button onClick={() => { localStorage.removeItem('lif_rejoin'); setRejoinInfo(null); }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-gray-500 hover:text-white transition-colors text-lg leading-none"
+                    style={{background:'rgba(255,255,255,0.07)'}}>✕</button>
+                </div>
+                <button
+                  onClick={() => {
+                    openPlayerScreen(rejoinInfo.gameId, rejoinInfo.playerId);
+                    setRejoinInfo(null);
+                  }}
+                  className="btn-gold w-full py-3.5 rounded-xl text-sm font-bold">
+                  ↩ Riprendi la partita
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {screen==='profile' && (
@@ -5332,6 +5761,7 @@ function App() {
           players={players}
           onEndGame={handleEndGame}
           onBack={()=>setScreen('home')}
+          onBackToCreate={(setup)=>{ setLastGameSetup(setup || null); setScreen('create'); }}
         />
       )}
 

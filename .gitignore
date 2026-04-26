@@ -3,5 +3,19 @@ ios/
 .DS_Store
 *.log
 .env
+.vercel
+.env*.local
+
+# Build output — rigenerato da Vercel e da `npm run build`
+www/
+
+# File temporanei
+*.lock
+.~lock.*
+
+# Script one-time (già eseguiti)
 patch*.py
+extract.py
 setup-capacitor.sh
+deploy.sh
+scratch/

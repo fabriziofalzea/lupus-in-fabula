@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(vm_stat)",
+      "Bash(top -l 1 -s 0)",
+      "Bash(sudo xcode-select:*)",
+      "Bash(xcode-select -p)",
+      "Bash(xcodebuild -version)",
+      "Bash(pod:*)",
+      "Bash(gem install:*)",
+      "Bash(brew install:*)",
+      "Bash(wait)",
+      "Bash(npx cap:*)",
+      "Bash(open:*)"
+    ]
+  }
+}
