@@ -110,11 +110,17 @@ Questo file serve a mantenere sincronizzati gli assistenti IA (come me e Claude)
     - `CreateGameScreen` accetta prop `initialSetup`: se presente, inizia da **Step 2** con players/wolfCount/roles già popolati — modificabili prima di rilanciare.
 
 17. **Feature: Narratore giocatore — "Partecipo anch'io"**
-    - Step 1 di `CreateGameScreen`: toggle "Partecipo anch'io" + campo nome narratore. Se attivo, il narratore viene aggiunto in coda alla lista giocatori con flag `isNarrator: true` e riceve un ruolo random come tutti.
-    - `rolesNeeded` include il narratore quando `narratorActive` è true.
-    - `GameMasterScreen`: FAB "Il mio ruolo" fisso bottom-right, visibile solo se esiste un `pStates[*].isNarrator` e la fase non è `waiting`.
-    - Toccando il FAB si apre un overlay fullscreen con solo la scheda del proprio ruolo (icona, nome, team, descrizione, tip) e la fase corrente. **Nessun log, nessun dato degli altri giocatori visibile** — anti-cheat.
-    - Rivincita e back-from-QR: il `narratorName` viene preservato nel setup e riproposto nel toggle del setup successivo.
+    - Toggle 🎭 **fisso in cima** allo Step 1 (non in fondo). Quando attivo + nome inserito: riga dorata in cima alla lista, counter include narratore.
+    - `canStep1 = rolesNeeded >= 4` (conta narratore). `pb-32` sul div Step 1 evita che la lista finisca sotto il tasto fisso.
+    - Il narratore riceve un ruolo random (`isNarrator: true` nel player object). `rolesNeeded` include il narratore quando `narratorActive`.
+    - `GameMasterScreen`: FAB "Il mio ruolo" fisso bottom-right, visibile solo se `pStates[*].isNarrator` e fase ≠ `waiting`. Overlay fullscreen con solo la scheda ruolo — **nessun log visibile** (anti-cheat).
+    - Rivincita e back-from-QR preservano `narratorName` nel setup.
+
+18. **Feature: Haptic feedback**
+    - `window.haptic(type)` wrapper globale in cima ad `App.jsx` (prima di `playSfx`).
+    - Usa `@capacitor/haptics` su nativo iOS/Android; `navigator.vibrate()` su Android web; silenzioso su iOS Safari web.
+    - Tipi: `light/medium/heavy/success/warning/error/select`.
+    - Applicato su: flip card ruolo (heavy), "Sono pronto" (medium), cala la notte (heavy), alba (medium), voto notte/giorno (select), inizio votazione (medium), condannato (error/warning), fine partita (success/error).
 
 16. **Fix: Win condition "amore" rimossa + fix stats Firebase**
     - Rimossa la win condition speciale Cupido (`return 'amore'` in `checkWin`): se restano 1 lupo e 1 villico innamorati, vince il branco normalmente (`wolves.length >= villagers.length → 'lupi'`). L'amore non vince le partite.

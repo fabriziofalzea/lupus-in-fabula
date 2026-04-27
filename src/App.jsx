@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback, Suspense } from 'react';
+import { usePurchases } from './hooks/usePurchases';
 
 // === FIREBASE IMPORTS ====
 import firebase from 'firebase/compat/app';
@@ -1548,7 +1549,7 @@ const PACKS = {
     id: 'ombre',
     name: 'Personaggi Oscuri',
     icon: '🌑',
-    price: '€2,99',
+    price: '€1,99',
     color: '#6c3483',
     description: 'Ruoli oscuri che ribaltano ogni certezza',
     roles: ['strega', 'figlio_dei_lupi', 'cacciatore', 'medium'],
@@ -1557,7 +1558,7 @@ const PACKS = {
     id: 'villaggio',
     name: 'Figure del Villaggio',
     icon: '🏘️',
-    price: '€2,99',
+    price: '€1,99',
     color: '#f39c12',
     description: 'Intrighi e poteri speciali tra i villici',
     roles: ['cupido', 'sindaco', 'sciamano', 'mitomane'],
@@ -1575,7 +1576,7 @@ const PACKS = {
     id: 'combo',
     name: 'Pacchetto Completo',
     icon: '⚡',
-    price: '€5,99',
+    price: '€4,99',
     color: '#e2c97e',
     description: 'Tutti i ruoli + Narratore AI — il gioco completo',
     roles: [],
@@ -1586,7 +1587,7 @@ const PACKS = {
 /* ================================================================
    PAYWALL MODAL
    ================================================================ */
-function PaywallModal({ packId, onClose, onUnlock }) {
+function PaywallModal({ packId, onClose, onPurchase, isPurchasing }) {
   const [expandedRole, setExpandedRole] = useState(null);
   const [isTrying, setIsTrying] = useState(false);
   const [triedOnce, setTriedOnce] = useState(false);
@@ -1724,16 +1725,20 @@ function PaywallModal({ packId, onClose, onUnlock }) {
         {/* CTA principale */}
         <div className="px-6 pb-6 flex flex-col gap-3">
           <button
-            onClick={() => { onUnlock(packId); onClose(); }}
-            className="w-full py-4 rounded-2xl font-cinzel font-bold text-base transition-all active:scale-95"
+            onClick={() => onPurchase(packId)}
+            disabled={isPurchasing}
+            className="w-full py-4 rounded-2xl font-cinzel font-bold text-base transition-all active:scale-95 flex items-center justify-center gap-2"
             style={{background:`linear-gradient(135deg,${pack.color}cc,${pack.color}66)`,
-                    color:'#0a0a1a', boxShadow:`0 0 24px ${pack.color}44`}}>
-            Acquista · {pack.price}
+                    color:'#0a0a1a', boxShadow:`0 0 24px ${pack.color}44`,
+                    opacity: isPurchasing ? 0.7 : 1}}>
+            {isPurchasing
+              ? <><span className="animate-spin">◌</span> Acquisto in corso…</>
+              : `Acquista · ${pack.price}`}
           </button>
 
-          {showComboUpsell && (
+          {showComboUpsell && !isPurchasing && (
             <button
-              onClick={() => { onClose(); setTimeout(() => onUnlock('_open_combo'), 50); }}
+              onClick={() => onPurchase('combo')}
               className="w-full py-2.5 rounded-xl text-xs font-semibold transition-all active:scale-95"
               style={{background:'rgba(226,201,126,0.06)', border:'1px solid rgba(226,201,126,0.2)', color:'rgba(226,201,126,0.7)'}}>
               ⚡ Oppure prendi tutto con il Pacchetto Completo · {combo.price}
@@ -2321,10 +2326,13 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
   const [showHint, setShowHint] = useState(false);
   const [previewRole, setPreviewRole] = useState(null);
   const [paywallPack, setPaywallPack] = useState(null);
-  const [purchasedPacks, setPurchasedPacks] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('lif_purchased_packs') || '[]'); }
-    catch { return []; }
-  });
+  const {
+    purchasedPacks,
+    isLoading: isPurchasing,
+    purchasePackage,
+    restorePurchases,
+    isPackUnlocked,
+  } = usePurchases();
   // Narratore gioca?
   const [narratorPlays, setNarratorPlays] = useState(() => !!initialSetup?.narratorName);
   const [narratorName, setNarratorName] = useState(() => initialSetup?.narratorName || '');
@@ -2370,13 +2378,10 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
   });
 
   const isUnlocked = rid => { const r = ROLES[rid]; return !r?.pack || purchasedPacks.includes(r.pack); };
-  const handleUnlock = packId => {
+  const handlePurchase = async (packId) => {
     if (packId === '_open_combo') { setPaywallPack('combo'); return; }
-    const pack = PACKS[packId];
-    const toUnlock = pack?.includes ? [...pack.includes, packId] : [packId];
-    const next = [...new Set([...purchasedPacks, ...toUnlock])];
-    setPurchasedPacks(next);
-    localStorage.setItem('lif_purchased_packs', JSON.stringify(next));
+    const result = await purchasePackage(packId);
+    if (result?.success) setPaywallPack(null); // chiudi modal dopo acquisto ok
   };
 
   const handleBack = () => { if (step === 1) onBack(); else setStep(s => s - 1); };
@@ -2579,7 +2584,7 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
             </div>
 
             {/* ── Ruoli base (villico + veggente + guardia) ── */}
-            <p className="text-gray-600 text-xs uppercase tracking-wider mb-2">Ruoli base</p>
+            <p className="text-gray-500 text-sm uppercase tracking-wider mb-2 font-semibold">Ruoli base</p>
             <div className="grid grid-cols-3 gap-2.5 mb-5">
               {Object.values(ROLES)
                 .filter(r => !r.pack && r.id !== 'lupo')
@@ -2603,26 +2608,28 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
                 <div key={packId} className="rounded-2xl overflow-hidden mb-3"
                      style={{border:`1px solid ${pack.color}${unlocked ? '44' : '22'}`,
                              background: unlocked ? `${pack.color}07` : 'rgba(255,255,255,0.02)'}}>
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left transition-all active:opacity-75"
+                  <div
+                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all active:opacity-75 cursor-pointer"
                     style={{background:`${pack.color}${unlocked ? '14' : '09'}`}}
                     onClick={() => setExpandedPacks(p => ({...p, [packId]: !p[packId]}))}>
-                    <span className="text-xl leading-none shrink-0">{pack.icon}</span>
+                    <span className="text-2xl leading-none shrink-0">{pack.icon}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-white text-sm leading-tight">{pack.name}</p>
-                      <p className="text-[10px] text-gray-500 leading-tight">{pack.description}</p>
+                      <p className="font-bold text-white text-base leading-tight">{pack.name}</p>
+                      <p className="text-xs text-gray-400 leading-tight mt-0.5">{pack.description}</p>
                     </div>
                     {unlocked ? (
-                      <span className="text-[10px] text-green-400 font-bold shrink-0 px-2 py-1 rounded-full"
+                      <span className="text-xs text-green-400 font-bold shrink-0 px-3 py-1.5 rounded-full"
                             style={{background:'rgba(74,222,128,0.1)', border:'1px solid rgba(74,222,128,0.25)'}}>✓</span>
                     ) : (
-                      <span className="text-[10px] font-bold shrink-0 px-2 py-1 rounded-full"
-                            style={{background:`${pack.color}20`, border:`1px solid ${pack.color}44`, color:pack.color}}>
+                      <button
+                        onClick={e => { e.stopPropagation(); setPaywallPack(packId); }}
+                        className="text-xs font-bold shrink-0 px-3 py-1.5 rounded-full transition-all active:scale-95"
+                        style={{background:`${pack.color}25`, border:`1px solid ${pack.color}55`, color:pack.color}}>
                         🔒 {pack.price}
-                      </span>
+                      </button>
                     )}
-                    <span className="text-gray-600 text-sm ml-1 shrink-0">{expanded ? '↑' : '↓'}</span>
-                  </button>
+                    <span className="text-gray-500 text-base ml-1 shrink-0">{expanded ? '↑' : '↓'}</span>
+                  </div>
                   {expanded && (
                     <div className="grid grid-cols-3 gap-2.5 p-3">
                       {pack.roles.map(rid => {
@@ -2644,39 +2651,51 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
 
             {/* ── Pack Narratore ── */}
             {!purchasedPacks.includes('narratore') && (
-              <button
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-3 text-left transition-all active:opacity-75"
+              <div
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-3 text-left transition-all active:opacity-75 cursor-pointer"
                 style={{background:'rgba(226,201,126,0.04)', border:'1px solid rgba(226,201,126,0.15)'}}
                 onClick={() => setPaywallPack('narratore')}>
-                <span className="text-xl leading-none shrink-0">🎙️</span>
+                <span className="text-2xl leading-none shrink-0">🎙️</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-white text-sm leading-tight">Voce AI Narratore</p>
-                  <p className="text-[10px] text-gray-500 leading-tight">Tono cinematografico — si attiva dalle impostazioni</p>
+                  <p className="font-bold text-white text-base leading-tight">Voce AI Narratore</p>
+                  <p className="text-xs text-gray-400 leading-tight mt-0.5">Tono cinematografico — si attiva dalle impostazioni</p>
                 </div>
-                <span className="text-[10px] font-bold shrink-0 px-2 py-1 rounded-full"
-                      style={{background:'rgba(226,201,126,0.12)', border:'1px solid rgba(226,201,126,0.3)', color:'#e2c97e'}}>
+                <button
+                  onClick={e => { e.stopPropagation(); setPaywallPack('narratore'); }}
+                  className="text-xs font-bold shrink-0 px-3 py-1.5 rounded-full transition-all active:scale-95"
+                  style={{background:'rgba(226,201,126,0.15)', border:'1px solid rgba(226,201,126,0.35)', color:'#e2c97e'}}>
                   🔒 {PACKS.narratore.price}
-                </span>
-              </button>
+                </button>
+              </div>
             )}
 
             {/* ── Combo ── */}
             {!PACKS.combo.includes.every(id => purchasedPacks.includes(id)) && (
-              <button
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl mb-3 text-left transition-all active:opacity-75"
+              <div
+                className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl mb-3 text-left transition-all active:opacity-75 cursor-pointer"
                 style={{background:'rgba(226,201,126,0.03)', border:'1px solid rgba(226,201,126,0.12)'}}
                 onClick={() => setPaywallPack('combo')}>
-                <span className="text-xl leading-none shrink-0">⚡</span>
+                <span className="text-2xl leading-none shrink-0">⚡</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-white text-sm leading-tight">{PACKS.combo.name}</p>
-                  <p className="text-[10px] text-gray-500 leading-tight">{PACKS.combo.description}</p>
+                  <p className="font-bold text-white text-base leading-tight">{PACKS.combo.name}</p>
+                  <p className="text-xs text-gray-400 leading-tight mt-0.5">{PACKS.combo.description}</p>
                 </div>
-                <span className="text-[10px] font-bold shrink-0 px-2 py-1 rounded-full"
-                      style={{background:'rgba(226,201,126,0.12)', border:'1px solid rgba(226,201,126,0.3)', color:'#e2c97e'}}>
+                <button
+                  onClick={e => { e.stopPropagation(); setPaywallPack('combo'); }}
+                  className="text-xs font-bold shrink-0 px-3 py-1.5 rounded-full transition-all active:scale-95"
+                  style={{background:'rgba(226,201,126,0.15)', border:'1px solid rgba(226,201,126,0.35)', color:'#e2c97e'}}>
                   {PACKS.combo.price}
-                </span>
-              </button>
+                </button>
+              </div>
             )}
+
+            {/* ── Ripristina acquisti ── */}
+            <button
+              onClick={restorePurchases}
+              disabled={isPurchasing}
+              className="w-full py-2 mb-3 rounded-xl text-xs text-gray-600 hover:text-gray-400 transition-colors text-center">
+              {isPurchasing ? '⟳ Ripristino in corso…' : '↩ Ripristina acquisti precedenti'}
+            </button>
 
             {/* ── Ruoli attuali — griglia 3 per riga (lupi inclusi) ── */}
             {(wolfCount > 0 || roles.length > 0) && (
@@ -2860,8 +2879,9 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
       {/* Paywall Modal */}
       <PaywallModal
         packId={paywallPack}
-        onClose={() => setPaywallPack(null)}
-        onUnlock={handleUnlock}
+        onClose={() => !isPurchasing && setPaywallPack(null)}
+        onPurchase={handlePurchase}
+        isPurchasing={isPurchasing}
       />
     </div>
   );
