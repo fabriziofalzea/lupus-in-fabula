@@ -24,7 +24,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
 
 // ─── CONFIGURA QUI LA TUA CHIAVE REVENUECAT ─────────────────────────────────
-const REVENUECAT_API_KEY = 'appl_XXXXXXXXXXXXXXXXXXXXXXXXXX'; // TODO: sostituire
+const REVENUECAT_API_KEY = 'test_LrRPDwnJYFudxsArpPwWanzSmvl';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PACK_IDS = ['ombre', 'villaggio', 'narratore'];
