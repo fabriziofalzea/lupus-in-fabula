@@ -22,9 +22,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { Purchases as RCPurchases } from '@revenuecat/purchases-capacitor';
 
 // ─── CONFIGURA QUI LA TUA CHIAVE REVENUECAT ─────────────────────────────────
-const REVENUECAT_API_KEY = 'test_LrRPDwnJYFudxsArpPwWanzSmvl';
+const REVENUECAT_API_KEY = 'appl_NnVZQQimQgRSTecAruqJeKQZtja';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PACK_IDS = ['ombre', 'villaggio', 'narratore'];
@@ -69,10 +70,7 @@ export function usePurchases() {
     let cancelled = false;
     (async () => {
       try {
-        // Import "nascosto" a Vite/Rollup — non viene bundlato nel build web.
-        // Su native Capacitor lo risolve a runtime; su web non viene mai chiamato.
-        const mod = await new Function('return import("@revenuecat/purchases-capacitor")')();
-        PurchasesRef.current = mod.Purchases;
+        PurchasesRef.current = RCPurchases;
         const RC = PurchasesRef.current;
 
         await RC.configure({ apiKey: REVENUECAT_API_KEY });
@@ -116,13 +114,14 @@ export function usePurchases() {
       const RC = PurchasesRef.current;
       const { current } = await RC.getOfferings();
 
-      // Cerca il package per identifier (product ID)
-      const targetProductId = PRODUCT_IDS[packId];
+      // Cerca il package per identifier (corrisponde al packId: 'ombre', 'villaggio', ecc.)
       const pkg = current?.availablePackages?.find(
-        p => p.product?.productIdentifier === targetProductId
+        p => p.identifier === packId
       );
 
-      if (!pkg) throw new Error(`Package non trovato: ${packId}`);
+      if (!pkg) {
+        throw new Error(`Package non trovato: ${packId}`);
+      }
 
       const { customerInfo } = await RC.purchasePackage({ aPackage: pkg });
       const newPacks = entitlementsToPackIds(customerInfo);
@@ -134,7 +133,7 @@ export function usePurchases() {
         // Utente ha cancellato: non è un errore
         return { cancelled: true };
       }
-      console.error('[usePurchases] purchasePackage error:', e);
+      console.error('[usePurchases] purchasePackage error:', e?.message);
       setError(e?.message || 'Errore durante l\'acquisto');
       return { error: e?.message };
     } finally {

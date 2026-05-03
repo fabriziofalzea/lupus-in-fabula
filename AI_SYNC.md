@@ -139,22 +139,26 @@ Questo file serve a mantenere sincronizzati gli assistenti IA (come me e Claude)
 - ~~Narrator MP3s~~ → 31 file presenti in `public/narrator/`, mappa statica completa
 - ~~Sign in with Apple (codice)~~ → `@capacitor-community/apple-sign-in` installato, `loginApple()` implementato
 
-### 🔴 Bloccanti per App Store
-1. **Sign in with Apple — Xcode entitlement mancante**: il codice c'è ma il file `.entitlements` non esiste ancora. Da Xcode: Signing & Capabilities → "+" → "Sign in with Apple". Poi configurare anche:
-   - Firebase Console → Authentication → aggiungi provider Apple
-   - App Store Connect → Capabilities → Sign in with Apple
-2. **RevenueCat / IAP reali**: i pack mostrano il paywall ma l'acquisto salva solo in `localStorage`. Nessun pagamento reale. Serve integrare RevenueCat + creare prodotti su App Store Connect.
-3. **`APP_STORE_URL`**: ancora `id000000000` — da aggiornare dopo la prima submission su App Store Connect.
+### ✅ Completato (maggio 2026)
+- **RevenueCat IAP reali**: integrazione completa con `@revenuecat/purchases-capacitor`. 4 prodotti su App Store Connect: `pack_ombre`, `pack_villaggio`, `pack_narratore`, `pack_combo`. Entitlement collegati. Testati in sandbox — acquisti e ripristino funzionanti.
+- **App Store Connect**: app `com.lupusinfabula.app` (ID: 6764061104) inviata per revisione il 3 maggio 2026. Build 2 selezionato. Classificazione 13+. Prezzi, screenshot, descrizione, keywords, privacy policy compilati.
+- **`APP_STORE_URL`**: aggiornato a `https://apps.apple.com/app/lupus-in-fabula/id6764061104`.
 
-### 🟡 Da fare prima del lancio
-4. **iOS build test su device**: `npm install && npm run ios` dal Mac, testare su iPhone reale.
-5. **App Store metadata**: screenshot (6.7", 6.1"), descrizione, keyword, age rating (probabilmente 9+), preview video (opzionale).
-6. **App Store Connect**: creare l'app, impostare bundle ID `com.lupusinfabula.app`, caricare build via Xcode/TestFlight.
+### 🔴 Bloccanti (risolti)
+- ~~Sign in with Apple~~ — non implementato per v1.0, rimandato a v1.1
+- ~~RevenueCat / IAP reali~~ → completato
+- ~~APP_STORE_URL~~ → aggiornato
+
+### 🟡 Da fare dopo approvazione Apple
+1. **Rilascio manuale**: quando Apple approva, premere "Rilascia" manualmente su App Store Connect.
+2. **Afghanistan e Marocco**: verificare se rimuovere la restrizione geografica automatica (classificazione 13+).
+3. **Sign in with Apple**: per v1.1 — Xcode entitlement + Firebase provider Apple.
+4. **Voce AI feedback post-acquisto**: aggiungere indicazione "dove trovare" la feature dopo l'acquisto del pack narratore (UX miglioramento).
 
 ### 🟢 Opzionale (post-lancio)
-7. **Universal Links**: `apple-app-site-association` su Vercel (per deep link web→app più fluidi).
-8. **Traduzioni EN**: utile per mercato internazionale, non necessario per lancio Italia.
-9. **Modello finanziario aggiornato**: rivedere proiezioni senza costi ElevenLabs (MP3 statici al 94%).
+5. **Universal Links**: `apple-app-site-association` su Vercel.
+6. **Traduzioni EN**: mercato internazionale.
+7. **Modello finanziario**: rivedere proiezioni senza costi ElevenLabs (MP3 statici 94%).
 
 ## 🚀 Comandi Deploy
 

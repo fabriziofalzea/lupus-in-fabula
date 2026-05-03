@@ -361,7 +361,7 @@ window.stopSfx = (id) => {
 /* ================================================================
    APP STORE URL — aggiorna quando l'app è live su App Store
    ================================================================ */
-const APP_STORE_URL = 'https://apps.apple.com/app/lupus-in-fabula/id000000000';
+const APP_STORE_URL = 'https://apps.apple.com/app/lupus-in-fabula/id6764061104';
 
 /* ================================================================
    FIREBASE CONFIG — inserisci i tuoi dati (vedi SETUP.md)
