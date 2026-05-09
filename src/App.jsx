@@ -784,36 +784,7 @@ function UserProfile() {
               {/* ── Stato: login / registrazione ── */}
               {mode==='main' && (
                 <>
-                  {/* Social login */}
-                  {isNativeApp ? (
-                    <button onClick={loginApple} disabled={loading}
-                            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl mb-3 font-semibold text-sm transition-all active:scale-95"
-                            style={{background:'#fff', color:'#000'}}>
-                      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                        <path d="M12.5 0c.1 1.4-.4 2.8-1.2 3.8-.8 1-2 1.7-3.2 1.6-.1-1.3.5-2.7 1.3-3.6C10.2.8 11.5.1 12.5 0zm3.5 13.1c-.7 1.5-1 2.2-1.9 3.5-.9 1.4-2.2 3.4-3.8 3.4-1.4 0-1.8-.9-3.7-.9-1.9 0-2.4.9-3.8.9C1.1 20 0 17.8 0 15.6c0-4.5 2.9-6.9 5.7-6.9 1.5 0 2.8.9 3.7.9.9 0 2.4-1 4.1-1 1 0 3.5.4 4.7 2.9l-2.2 1.6z" fill="#000"/>
-                      </svg>
-                      {loading ? '…' : 'Continua con Apple'}
-                    </button>
-                  ) : (
-                    <button onClick={loginGoogle} disabled={loading}
-                            className="w-full flex items-center justify-center gap-3 py-3.5 rounded-2xl mb-3 font-semibold text-sm transition-all active:scale-95"
-                            style={{background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.14)', color:'#fff'}}>
-                      <svg width="18" height="18" viewBox="0 0 18 18">
-                        <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>
-                        <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/>
-                        <path fill="#FBBC05" d="M3.964 10.707c-.18-.54-.282-1.117-.282-1.707s.102-1.167.282-1.707V4.961H.957C.347 6.174 0 7.548 0 9s.348 2.826.957 4.039l3.007-2.332z"/>
-                        <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58z"/>
-                      </svg>
-                      Continua con Google
-                    </button>
-                  )}
-
-                  {/* Divisore */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.08)'}}/>
-                    <span className="text-gray-700 text-xs">oppure</span>
-                    <div className="flex-1 h-px" style={{background:'rgba(255,255,255,0.08)'}}/>
-                  </div>
+                  {/* Google e Apple login rimandati a v1.1 — solo email/password per v1.0 */}
 
                   {/* Email + Password */}
                   <input type="email" placeholder="Email" value={email}
@@ -1147,109 +1118,6 @@ function PrivacyConsentModal({ onAccept }) {
 }
 
 /* ================================================================
-   FIREBASE SETUP MODAL
-   ================================================================ */
-function SetupModal({onClose}) {
-  const [step, setStep] = useState(0);
-  return (
-    <div className="modal-backdrop" onClick={e => e.target===e.currentTarget && onClose()}>
-      <div className="modal-box glass p-6" style={{background:'#0d1117', border:'1px solid rgba(226,201,126,0.2)'}}>
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-cinzel text-moon text-lg font-bold">⚙️ Configurazione Firebase</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-xl leading-none">✕</button>
-        </div>
-
-        {step===0 && (
-          <div className="anim-fade-in">
-            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-              Per il gioco multi-dispositivo hai bisogno di un account <strong className="text-white">Firebase</strong> gratuito (Google).
-              Bastano 5 minuti e zero esperienza tecnica.
-            </p>
-            <div className="flex flex-col gap-3 mb-5">
-              {[
-                ['1','Vai su','firebase.google.com','https://firebase.google.com'],
-                ['2','Clicca "Inizia" e accedi con Google','',''],
-                ['3','Crea un nuovo progetto (nome libero)','',''],
-                ['4','Nella console vai su "Realtime Database" → "Crea database"','',''],
-                ['5','Scegli una regione europea e modalità "test"','',''],
-              ].map(([n,t,link,href]) => (
-                <div key={n} className="flex gap-3 items-start">
-                  <span className="font-cinzel text-moon font-bold text-sm w-5 shrink-0">{n}.</span>
-                  <p className="text-gray-300 text-sm">
-                    {t} {link && <a href={href} target="_blank" className="text-moon underline">{link}</a>}
-                  </p>
-                </div>
-              ))}
-            </div>
-            <button onClick={()=>setStep(1)} className="btn-gold w-full py-3 rounded-xl text-sm">
-              Continua →
-            </button>
-          </div>
-        )}
-
-        {step===1 && (
-          <div className="anim-fade-in">
-            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-              Ora recupera le credenziali del progetto:
-            </p>
-            <div className="flex flex-col gap-3 mb-4">
-              {[
-                'Nella console Firebase, clicca sull\'icona ⚙️ → "Impostazioni progetto"',
-                'Scorri fino a "Le tue app" → clicca sull\'icona "</>" (Web)',
-                'Dai un nome all\'app e clicca "Registra app"',
-                'Copia il blocco di codice "firebaseConfig" che appare',
-              ].map((t,i) => (
-                <div key={i} className="flex gap-3 items-start">
-                  <span className="font-cinzel text-moon font-bold text-sm w-5 shrink-0">{i+1}.</span>
-                  <p className="text-gray-300 text-sm">{t}</p>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-xl p-3 mb-4 text-xs font-mono text-gray-400 overflow-auto"
-                 style={{background:'rgba(0,0,0,0.4)', border:'1px solid rgba(255,255,255,0.06)'}}>
-              {`const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "mio-gioco.firebaseapp.com",
-  databaseURL: "https://mio-gioco-default-rtdb...",
-  projectId: "mio-gioco",
-  ...
-};`}
-            </div>
-            <button onClick={()=>setStep(2)} className="btn-gold w-full py-3 rounded-xl text-sm">
-              Continua →
-            </button>
-          </div>
-        )}
-
-        {step===2 && (
-          <div className="anim-fade-in">
-            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-              Apri il file <code className="text-moon">index.html</code> con un editor di testo (anche il Blocco Note va bene) e cerca la sezione:
-            </p>
-            <div className="rounded-xl p-3 mb-4 text-xs font-mono text-yellow-400 overflow-auto"
-                 style={{background:'rgba(0,0,0,0.4)', border:'1px solid rgba(226,201,126,0.2)'}}>
-              {`const FIREBASE_CONFIG = {
-  apiKey: "INSERISCI_API_KEY",
-  ...
-}`}
-            </div>
-            <p className="text-gray-300 text-sm mb-4 leading-relaxed">
-              Sostituisci i valori <code className="text-moon">INSERISCI_...</code> con quelli del tuo progetto Firebase e salva il file.
-            </p>
-            <p className="text-gray-400 text-xs mb-5">
-              Poi carica il file su un host (es. <a href="https://app.netlify.com/drop" target="_blank" className="text-moon underline">Netlify Drop</a> — gratis, trascina e lascia) per ottenere un link condivisibile con i giocatori.
-            </p>
-            <button onClick={onClose} className="btn-gold w-full py-3 rounded-xl text-sm">
-              ✓ Ho capito, chiudi
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ================================================================
    ONBOARDING / TUTORIAL
    ================================================================ */
 function TutorialModal({ isOpen, onClose, isOnboarding = false }) {
@@ -1432,7 +1300,7 @@ function TutorialModal({ isOpen, onClose, isOnboarding = false }) {
 /* ================================================================
    HOME SCREEN
    ================================================================ */
-function HomeScreen({onCreateGame, onViewHistory, onSetup, onProfile}) {
+function HomeScreen({onCreateGame, onViewHistory, onProfile}) {
   const isFirstLaunch = !localStorage.getItem('lif_tutorial_done');
   const [showTutorial, setShowTutorial] = useState(isFirstLaunch);
   const [isOnboarding, setIsOnboarding] = useState(isFirstLaunch);
@@ -1519,19 +1387,7 @@ function HomeScreen({onCreateGame, onViewHistory, onSetup, onProfile}) {
         {/* Divisore basso */}
         <div className="home-divider mt-8 mb-4" />
 
-        <div className="flex justify-center">
-          <button onClick={onSetup}
-            className="text-gray-700 text-xs hover:text-gray-500 transition-colors">
-            ⚙️ Configura Firebase
-          </button>
-        </div>
-
-        {!isFirebaseConfigured() && (
-          <div className="mt-3 px-3 py-2 rounded-xl text-xs text-yellow-700"
-               style={{background:'rgba(234,179,8,0.06)', border:'1px solid rgba(234,179,8,0.12)'}}>
-            ⚠️ Firebase non configurato — modalità demo attiva
-          </div>
-        )}
+        {/* Pulsante "Configura Firebase" rimosso — flaggato da Apple come beta feature */}
 
         <p className="text-xs mt-6 tracking-widest" style={{color:'rgba(226,201,126,0.2)'}}>— un viaggio nella notte —</p>
       </div>
@@ -1996,6 +1852,9 @@ function ProfileScreen({ user, onBack }) {
   const [showAvatarEditor, setShowAvatarEditor] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const [lbLoading, setLbLoading] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   // Load avatar
   useEffect(() => {
@@ -2045,6 +1904,37 @@ function ProfileScreen({ user, onBack }) {
     setAvatar(newConfig);
     try { localStorage.setItem('lif_avatar', JSON.stringify(newConfig)); } catch(e) {}
     if (db && user) db.ref(`users/${user.uid}/avatar`).set(newConfig).catch(() => {});
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user || !auth) return;
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      // 1. Cancella dati utente dal Realtime Database
+      if (db) {
+        await db.ref(`users/${user.uid}`).remove();
+      }
+      // 2. Cancella dati locali
+      try {
+        localStorage.removeItem('lif_avatar');
+        localStorage.removeItem('lif_purchased_packs');
+        localStorage.removeItem('lif_rejoin');
+        localStorage.removeItem('lif_privacy_accepted');
+      } catch(e) {}
+      // 3. Cancella l'account Firebase Auth
+      await auth.currentUser.delete();
+      // 4. Torna alla home (l'app rileverà user=null)
+      onBack();
+    } catch(e) {
+      console.error('[deleteAccount]', e);
+      if (e.code === 'auth/requires-recent-login') {
+        setDeleteError('Per sicurezza, esci e accedi di nuovo prima di eliminare l\'account.');
+      } else {
+        setDeleteError('Errore durante l\'eliminazione. Riprova.');
+      }
+      setDeleteLoading(false);
+    }
   };
 
   if (!user) {
@@ -2209,7 +2099,7 @@ function ProfileScreen({ user, onBack }) {
         )}
 
         {/* Section 4 — Leaderboard */}
-        <div className="anim-fade-up" style={{background:'#12122a', borderRadius:20, padding:20, border:'1px solid rgba(255,255,255,0.08)', marginBottom:24}}>
+        <div className="anim-fade-up" style={{background:'#12122a', borderRadius:20, padding:20, border:'1px solid rgba(255,255,255,0.08)'}}>
           <h3 className="font-cinzel" style={{color:'#e2c97e', fontSize:14, fontWeight:700, letterSpacing:'0.1em', marginBottom:14}}>Classifica Narratori</h3>
           {!db ? (
             <p style={{color:'rgba(255,255,255,0.35)', fontSize:13, textAlign:'center', padding:'12px 0'}}>Connetti Firebase per vedere la classifica</p>
@@ -2259,7 +2149,92 @@ function ProfileScreen({ user, onBack }) {
           )}
         </div>
 
+        {/* Section 5 — Danger Zone */}
+        <div className="anim-fade-up" style={{
+          borderRadius:20, padding:20,
+          border:'1px solid rgba(192,57,43,0.2)',
+          background:'rgba(192,57,43,0.04)',
+          marginBottom:32,
+        }}>
+          <h3 className="font-cinzel" style={{color:'rgba(192,57,43,0.8)', fontSize:13, fontWeight:700, letterSpacing:'0.12em', marginBottom:12}}>Zona Pericolosa</h3>
+          <p style={{color:'rgba(255,255,255,0.4)', fontSize:12, lineHeight:1.6, marginBottom:16}}>
+            L'eliminazione dell'account è definitiva. Tutti i tuoi dati, statistiche e progressi verranno cancellati permanentemente.
+          </p>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            style={{
+              width:'100%', padding:'12px 0', borderRadius:12,
+              background:'transparent', border:'1px solid rgba(192,57,43,0.5)',
+              color:'rgba(192,57,43,0.9)', fontSize:13, fontWeight:600,
+              cursor:'pointer', letterSpacing:'0.05em',
+            }}>
+            Elimina il mio account
+          </button>
+        </div>
+
       </div>
+
+      {/* Modal conferma eliminazione account */}
+      {showDeleteConfirm && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:200,
+          background:'rgba(0,0,0,0.85)', backdropFilter:'blur(8px)',
+          display:'flex', alignItems:'center', justifyContent:'center', padding:24,
+        }}>
+          <div style={{
+            background:'#0d1117', borderRadius:24, padding:28,
+            border:'1px solid rgba(192,57,43,0.4)',
+            maxWidth:360, width:'100%',
+            boxShadow:'0 0 60px rgba(192,57,43,0.15)',
+          }}>
+            <div style={{textAlign:'center', marginBottom:20}}>
+              <div style={{fontSize:40, marginBottom:12}}>⚠️</div>
+              <h3 className="font-cinzel" style={{color:'#e2c97e', fontSize:18, fontWeight:800, marginBottom:8}}>Sei sicuro?</h3>
+              <p style={{color:'rgba(255,255,255,0.55)', fontSize:13, lineHeight:1.65}}>
+                Questa azione è <strong style={{color:'rgba(192,57,43,0.9)'}}>irreversibile</strong>. Il tuo account, le statistiche e tutti i dati associati verranno eliminati definitivamente.
+              </p>
+            </div>
+
+            {deleteError && (
+              <div style={{
+                background:'rgba(192,57,43,0.1)', border:'1px solid rgba(192,57,43,0.3)',
+                borderRadius:12, padding:'10px 14px', marginBottom:16,
+                color:'rgba(255,120,100,0.9)', fontSize:12, lineHeight:1.5,
+              }}>
+                {deleteError}
+              </div>
+            )}
+
+            <div style={{display:'flex', flexDirection:'column', gap:10}}>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+                style={{
+                  width:'100%', padding:'13px 0', borderRadius:12,
+                  background:'rgba(192,57,43,0.85)', border:'none',
+                  color:'#fff', fontSize:14, fontWeight:700,
+                  cursor: deleteLoading ? 'not-allowed' : 'pointer',
+                  opacity: deleteLoading ? 0.6 : 1,
+                  letterSpacing:'0.05em',
+                }}>
+                {deleteLoading ? 'Eliminazione in corso...' : 'Sì, elimina definitivamente'}
+              </button>
+              <button
+                onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
+                disabled={deleteLoading}
+                style={{
+                  width:'100%', padding:'13px 0', borderRadius:12,
+                  background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.12)',
+                  color:'rgba(255,255,255,0.7)', fontSize:14, fontWeight:600,
+                  cursor:'pointer',
+                }}>
+                Annulla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -2927,6 +2902,17 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
   const [showMyCard, setShowMyCard] = useState(false); // narratore vede la sua scheda personaggio
   const [narratorLocalVote, setNarratorLocalVote] = useState(null); // voto locale del narratore-giocatore
   const eventLogRef = useRef([]); // log eventi per il recap finale (ref = no stale closure)
+
+  const { purchasedPacks, purchasePackage, isLoading: isPurchasing } = usePurchases();
+  const [paywallPack, setPaywallPack] = useState(null);
+
+  // Se ttsMode='voice' è rimasto in localStorage senza acquisto, lo resettiamo
+  useEffect(() => {
+    if (ttsMode === 'voice' && !purchasedPacks.includes('narratore')) {
+      setTtsMode('script');
+      localStorage.setItem('lif_tts_mode', 'script');
+    }
+  }, [purchasedPacks, ttsMode]);
 
   const toggleTtsMode = () => {
     const next = ttsMode === 'voice' ? 'script' : 'voice';
@@ -3718,12 +3704,19 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
                   📖 Script
                 </button>
                 <button
-                  onClick={()=>{ setTtsMode('voice'); localStorage.setItem('lif_tts_mode','voice'); }}
+                  onClick={()=>{
+                    if (purchasedPacks.includes('narratore')) {
+                      setTtsMode('voice');
+                      localStorage.setItem('lif_tts_mode','voice');
+                    } else {
+                      setPaywallPack('narratore');
+                    }
+                  }}
                   className="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all"
                   style={ttsMode==='voice'
                     ? {background:'rgba(139,92,246,0.2)', color:'#a78bfa', border:'1px solid rgba(139,92,246,0.3)'}
                     : {color:'#6b7280'}}>
-                  🎙️ Voce AI
+                  🎙️ Voce AI {!purchasedPacks.includes('narratore') && '🔒'}
                 </button>
               </div>
             </div>
@@ -4535,6 +4528,17 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
           </>
         );
       })()}
+
+      <PaywallModal
+        packId={paywallPack}
+        onClose={() => !isPurchasing && setPaywallPack(null)}
+        onPurchase={async (packId) => {
+          if (packId === '_open_combo') { setPaywallPack('combo'); return; }
+          const result = await purchasePackage(packId);
+          if (result?.success) setPaywallPack(null);
+        }}
+        isPurchasing={isPurchasing}
+      />
     </div>
   );
 }
@@ -4554,11 +4558,8 @@ function PlayerScreen({gameId, playerId}) {
   const [showRolesInGame, setShowRolesInGame] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
 
-  // Helper per log visibile (debug)
-  const contextLog = (msg) => {
-    console.log(msg);
-    setDebugLog(prev => (msg + '\n' + prev).substring(0, 200));
-  };
+  // Helper per log
+  const contextLog = (msg) => { console.log(msg); };
 
   // Salva sessione per recupero (se chiude per sbaglio)
   useEffect(() => {
@@ -5618,7 +5619,7 @@ function App() {
   const [players, setPlayers] = useState([]);
   const [isPlayer, setIsPlayer] = useState(false);
   const [playerId, setPlayerId] = useState(null);
-  const [showSetup, setShowSetup] = useState(false);
+
   const [lastGameSetup, setLastGameSetup] = useState(null);
   const [rejoinInfo, setRejoinInfo] = useState(null); // {gameId, playerId, playerName}
 
@@ -5767,7 +5768,6 @@ function App() {
           <HomeScreen
             onCreateGame={()=>setScreen('create')}
             onViewHistory={()=>setScreen('history')}
-            onSetup={()=>setShowSetup(true)}
             onProfile={()=>setScreen('profile')}
           />
           {/* Banner recupero sessione — appare se il giocatore aveva una partita aperta */}
@@ -5829,7 +5829,7 @@ function App() {
         <HistoryScreen onBack={()=>setScreen('home')}/>
       )}
 
-      {showSetup && <SetupModal onClose={()=>setShowSetup(false)}/>}
+      {/* SetupModal rimosso — era flaggato da Apple come beta feature (Guideline 2.2) */}
     </div>
   );
 }
