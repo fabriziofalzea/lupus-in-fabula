@@ -128,6 +128,16 @@ Questo file serve a mantenere sincronizzati gli assistenti IA (come me e Claude)
     - `statsRef.set(updated)` → `statsRef.update(updated)` per evitare sovrascrittura di altri campi utente su Firebase.
     - `initialSetup.initialStep || 2` → `initialSetup.initialStep ?? 2` (fix falsy check).
 
+19. **Fix critico: Paywall Voce AI mancante (v1.1)**
+    - *Problema*: il bottone "🎙️ Voce AI" in `GameMasterScreen` impostava `ttsMode='voice'` e chiamava la funzione ElevenLabs su Vercel **senza nessun controllo acquisto**. Chiunque usava la voce AI a spese del proprietario dell'API key.
+    - *Soluzione*: aggiunto `usePurchases()` direttamente in `GameMasterScreen` per ottenere `purchasedPacks` e `purchasePackage`. Il bottone ora controlla `purchasedPacks.includes('narratore')` — se non acquistato apre `PaywallModal('narratore')`. Aggiunto `useEffect` che resetta `ttsMode` a `'script'` se rimane `'voice'` in localStorage senza acquisto (difesa contro bypass manuale). `PaywallModal` aggiunto nel JSX di `GameMasterScreen`.
+    - *Versione rilasciata*: v1.1 (build 2) — inviata su App Store Connect il 2026-05-09.
+
+20. **Pulizia: rimosso login Google/Apple e SetupModal**
+    - Login Google e Sign in with Apple rimossi dalla schermata auth (rimandati a v1.2+).
+    - `SetupModal` rimosso — era stato flaggato da Apple (Guideline 2.2) nella review della build 1.
+    - Questi cambi erano già presenti localmente ma non committati — inclusi nel commit v1.1.
+
 ## 📝 To-Do Aperti per l'Utente
 
 ### ✅ Completato
@@ -149,10 +159,10 @@ Questo file serve a mantenere sincronizzati gli assistenti IA (come me e Claude)
 - ~~RevenueCat / IAP reali~~ → completato
 - ~~APP_STORE_URL~~ → aggiornato
 
-### 🟡 Da fare dopo approvazione Apple
-1. **Rilascio manuale**: quando Apple approva, premere "Rilascia" manualmente su App Store Connect.
+### 🟡 Da fare dopo approvazione Apple v1.1
+1. **Rilascio manuale**: quando Apple approva v1.1, premere "Rilascia" manualmente su App Store Connect.
 2. **Afghanistan e Marocco**: verificare se rimuovere la restrizione geografica automatica (classificazione 13+).
-3. **Sign in with Apple**: per v1.1 — Xcode entitlement + Firebase provider Apple.
+3. **Sign in with Apple**: per v1.2 — Xcode entitlement + Firebase provider Apple.
 4. **Voce AI feedback post-acquisto**: aggiungere indicazione "dove trovare" la feature dopo l'acquisto del pack narratore (UX miglioramento).
 
 ### 🟢 Opzionale (post-lancio)
