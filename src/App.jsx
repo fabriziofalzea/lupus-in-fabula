@@ -2289,7 +2289,7 @@ function RoleCardC({ r, count, onAdd, onInfo, unlocked, disabled }) {
   );
 }
 
-function CreateGameScreen({onStart, onBack, initialSetup}) {
+function CreateGameScreen({onStart, onBack, initialSetup, userId}) {
   const [step, setStep] = useState(initialSetup ? (initialSetup.initialStep ?? 2) : 1);
   const [players, setPlayers] = useState(() => initialSetup ? initialSetup.playerNames : []);
   const [inputName, setInputName] = useState('');
@@ -2307,7 +2307,7 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
     purchasePackage,
     restorePurchases,
     isPackUnlocked,
-  } = usePurchases();
+  } = usePurchases(userId);
   // Narratore gioca?
   const [narratorPlays, setNarratorPlays] = useState(() => !!initialSetup?.narratorName);
   const [narratorName, setNarratorName] = useState(() => initialSetup?.narratorName || '');
@@ -2865,7 +2865,7 @@ function CreateGameScreen({onStart, onBack, initialSetup}) {
 /* ================================================================
    GAME MASTER SCREEN
    ================================================================ */
-function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) {
+function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate, userId}) {
   const [phase, setPhase] = useState('waiting');
   const [nightStep, setNightStep] = useState(0);
   const [dayNum, setDayNum] = useState(1);
@@ -2903,7 +2903,7 @@ function GameMasterScreen({gameId, players, onEndGame, onBack, onBackToCreate}) 
   const [narratorLocalVote, setNarratorLocalVote] = useState(null); // voto locale del narratore-giocatore
   const eventLogRef = useRef([]); // log eventi per il recap finale (ref = no stale closure)
 
-  const { purchasedPacks, purchasePackage, isLoading: isPurchasing } = usePurchases();
+  const { purchasedPacks, purchasePackage, isLoading: isPurchasing } = usePurchases(userId);
   const [paywallPack, setPaywallPack] = useState(null);
 
   // Se ttsMode='voice' è rimasto in localStorage senza acquisto, lo resettiamo
@@ -5607,10 +5607,38 @@ function HistoryScreen({onBack}) {
 /* ================================================================
    MAIN APP — ROUTER
    ================================================================ */
+function needsUpdate(current, minimum) {
+  const c = current.split('.').map(Number);
+  const m = minimum.split('.').map(Number);
+  for (let i = 0; i < Math.max(c.length, m.length); i++) {
+    if ((c[i] || 0) < (m[i] || 0)) return true;
+    if ((c[i] || 0) > (m[i] || 0)) return false;
+  }
+  return false;
+}
+
 function App() {
   useEffect(() => { const status = document.getElementById('boot-status'); if (status) status.style.display = 'none'; }, []);
 
   const user = useAuth();
+  const [forceUpdate, setForceUpdate] = useState(false);
+
+  useEffect(() => {
+    if (!window.IS_NATIVE_APP || !db) return;
+    (async () => {
+      try {
+        const { App: CapApp } = await import('@capacitor/app');
+        const info = await CapApp.getInfo();
+        db.ref('config/minVersion').once('value').then(snap => {
+          const min = snap.val();
+          if (min && needsUpdate(info.version, min)) setForceUpdate(true);
+        });
+      } catch (e) {
+        console.warn('[forceUpdate] check failed:', e);
+      }
+    })();
+  }, []);
+
   const [privacyAccepted, setPrivacyAccepted] = useState(
     () => !!localStorage.getItem('lif_privacy_accepted')
   );
@@ -5812,6 +5840,7 @@ function App() {
           onStart={handleCreateGame}
           onBack={()=>{ setLastGameSetup(null); setScreen('home'); }}
           initialSetup={lastGameSetup}
+          userId={user?.uid}
         />
       )}
 
@@ -5822,6 +5851,7 @@ function App() {
           onEndGame={handleEndGame}
           onBack={()=>setScreen('home')}
           onBackToCreate={(setup)=>{ setLastGameSetup(setup || null); setScreen('create'); }}
+          userId={user?.uid}
         />
       )}
 
@@ -5830,6 +5860,17 @@ function App() {
       )}
 
       {/* SetupModal rimosso — era flaggato da Apple come beta feature (Guideline 2.2) */}
+
+      {forceUpdate && (
+        <div style={{position:'fixed',inset:0,zIndex:9999,background:'rgba(11,10,20,0.97)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'2rem',textAlign:'center'}}>
+          <div style={{fontSize:'4rem',marginBottom:'1.5rem'}}>🐺</div>
+          <h2 style={{fontSize:'1.5rem',fontWeight:'bold',color:'#eacc85',marginBottom:'0.75rem',fontFamily:'Cinzel,serif'}}>Aggiornamento richiesto</h2>
+          <p style={{color:'rgba(255,255,255,0.65)',marginBottom:'2rem',maxWidth:'280px'}}>Una nuova versione di Lupus In Fabula è disponibile. Aggiorna per continuare a giocare.</p>
+          <a href={APP_STORE_URL} target="_blank" rel="noopener noreferrer" style={{background:'#eacc85',color:'#0b0a14',fontWeight:'bold',padding:'1rem 2rem',borderRadius:'1rem',fontSize:'1.1rem',textDecoration:'none'}}>
+            Aggiorna su App Store
+          </a>
+        </div>
+      )}
     </div>
   );
 }

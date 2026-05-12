@@ -1,7 +1,7 @@
 # LUPUS IN FABULA — Claude Code Instructions
 
 > Agente specializzato di Jarvis per lo sviluppo e la gestione dell'app Lupus In Fabula.
-> Versione: 1.0 | Aggiornato: Maggio 2026
+> Versione: 1.2 | Aggiornato: 2026-05-12
 
 ---
 
@@ -22,7 +22,8 @@ Regole comportamentali: vedi `../Jarvis/CLAUDE.md` (profilo utente, stile, proat
 | **App Store ID** | `id6764061104` |
 | **App Store URL** | `https://apps.apple.com/app/lupus-in-fabula/id6764061104` |
 | **Web (Vercel)** | `https://lupus-in-fabula-eight.vercel.app` |
-| **Stato** | In revisione Apple — Build 2 inviata il 3 maggio 2026 |
+| **Stato** | v1.2 (build 3) in review Apple — inviata 2026-05-12 |
+| **Live** | v1.1 (build 2) — approvata 2026-05-12 |
 
 ---
 
@@ -31,9 +32,9 @@ Regole comportamentali: vedi `../Jarvis/CLAUDE.md` (profilo utente, stile, proat
 | Layer | Tecnologia |
 |---|---|
 | Frontend | React 18, Vite, Tailwind CSS |
-| Mobile | Capacitor (iOS + Android) |
+| Mobile | Capacitor (iOS) |
 | Backend API | Vercel Serverless Functions (`api/speak.js`, `api/voices.js`) |
-| Database/Auth | Firebase Realtime Database + Google Auth / Email Auth |
+| Database/Auth | Firebase Realtime Database + Email Auth (Google/Apple rimandati a v1.3+) |
 | Voce AI | ElevenLabs — voce Daniel (`onwK4e9ZLuTAKqWW03F9`) |
 | Monetizzazione | RevenueCat + App Store Connect IAP |
 | Deep linking | Schema `lupus://` |
@@ -61,7 +62,8 @@ Prodotti App Store Connect: `pack_ombre`, `pack_villaggio`, `pack_narratore`, `p
 |---|---|
 | `AI_SYNC.md` | **Fonte di verità** — architettura, fix critici, to-do |
 | `NARRATOR_RECORDING_GUIDE.md` | Guida registrazione 30 MP3 statici narratore |
-| `src/App.jsx` | Entry point principale — contiene `APP_STORE_URL`, `FIREBASE_CONFIG`, `PACKS` |
+| `src/App.jsx` | Entry point principale — `APP_STORE_URL`, `FIREBASE_CONFIG`, `PACKS`, `needsUpdate()` |
+| `src/hooks/usePurchases.js` | Hook RevenueCat — accetta `userId` per RC.logIn |
 | `api/speak.js` | Proxy ElevenLabs TTS |
 | `api/voices.js` | Lista voci ElevenLabs |
 | `vercel.json` | Config deploy Vercel |
@@ -71,46 +73,66 @@ Prodotti App Store Connect: `pack_ombre`, `pack_villaggio`, `pack_narratore`, `p
 
 ## Note critiche
 
-- **Leggere sempre `AI_SYNC.md` prima di proporre modifiche** — contiene fix non ovvi e decisioni architetturali motivate
+- **Leggere sempre `AI_SYNC.md` prima di proporre modifiche**
 - Modalità narratore default: **Script** (solo testo). Voce AI va attivata nelle impostazioni
 - Su iOS nativo: chiamate TTS usano dominio hardcoded `lupus-in-fabula-eight.vercel.app`
 - Su web: chiamate TTS usano `window.location.origin`
 - `APP_STORE_URL` in cima a `src/App.jsx` — punto unico di modifica
 - Il push git **NON** triggera deploy automatico — usare sempre `npx vercel --prod`
 - Stats tracciate solo per utenti registrati (leva conversione registrazione)
+- **Force update**: attivare con `config/minVersion` su Firebase Console — NON farlo prima che la versione target sia live su App Store
+- **RC identificazione**: `usePurchases(userId)` — passare sempre `user?.uid` dalle schermate che usano l'hook
 
 ---
 
-## Deploy
+## Deploy (workflow completo)
 
 ```bash
-# Web — Vercel produzione
+# 1. Build web + deploy Vercel
 cd "/Users/fabriziofalzea/Documents/Claude/Projects/Lupus In Fabula"
 npx vercel --prod
 
-# Build iOS
-npm install && npm run ios
+# 2. Sync iOS
+npx cap sync ios
+
+# 3. Bump versione in project.pbxproj (MARKETING_VERSION + CURRENT_PROJECT_VERSION)
+
+# 4. Archive
+xcodebuild \
+  -workspace "ios/App/App.xcworkspace" \
+  -scheme App -configuration Release \
+  -archivePath "/tmp/LupusInFabula.xcarchive" \
+  -destination "generic/platform=iOS" \
+  CODE_SIGN_STYLE=Automatic DEVELOPMENT_TEAM=38498XM6PJ \
+  archive
+
+# 5. Upload via Xcode Organizer
+open -a Xcode "/tmp/LupusInFabula.xcarchive"
 ```
 
 ---
 
-## To-do post-approvazione Apple
+## Rilasci
+
+| Versione | Build | Data | Stato |
+|---|---|---|---|
+| 1.0 | 1 | 2026-05-09 | ✅ Live |
+| 1.1 | 2 | 2026-05-09 | ✅ Live (fix paywall Voce AI) |
+| 1.2 | 3 | 2026-05-12 | ⏳ In review (RC login UID + force update) |
+
+---
+
+## To-do (v1.3+)
 
 | Priorità | Azione |
 |---|---|
-| 🔴 | Rilascio manuale su App Store Connect quando Apple approva |
+| 🔴 | Attivare `config/minVersion: "1.2"` su Firebase quando v1.2 è approvata |
 | 🟡 | Verificare restrizione geografica (Afghanistan, Marocco — 13+) |
-| 🟡 | Sign in with Apple v1.1 — Xcode entitlement + Firebase provider Apple |
+| 🟡 | Sign in with Apple — Xcode entitlement + Firebase provider Apple |
 | 🟡 | UX: feedback post-acquisto pack narratore |
 | 🟢 | Universal Links (`apple-app-site-association` su Vercel) |
 | 🟢 | Traduzioni EN — mercato internazionale |
 
 ---
 
-## Aggiornamento automatico
-
-Dopo ogni sessione di sviluppo con fix, nuove feature o decisioni architetturali, aggiorna `AI_SYNC.md` e questo `CLAUDE.md`. Incrementa la versione.
-
----
-
-*Lupus In Fabula v1.0 — Agente Jarvis*
+*Lupus In Fabula v1.2 — Agente Jarvis*

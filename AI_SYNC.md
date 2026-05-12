@@ -153,17 +153,23 @@ Questo file serve a mantenere sincronizzati gli assistenti IA (come me e Claude)
 - **RevenueCat IAP reali**: integrazione completa con `@revenuecat/purchases-capacitor`. 4 prodotti su App Store Connect: `pack_ombre`, `pack_villaggio`, `pack_narratore`, `pack_combo`. Entitlement collegati. Testati in sandbox — acquisti e ripristino funzionanti.
 - **App Store Connect**: app `com.lupusinfabula.app` (ID: 6764061104) inviata per revisione il 3 maggio 2026. Build 2 selezionato. Classificazione 13+. Prezzi, screenshot, descrizione, keywords, privacy policy compilati.
 - **`APP_STORE_URL`**: aggiornato a `https://apps.apple.com/app/lupus-in-fabula/id6764061104`.
+- **v1.1 approvata e live** (2026-05-12): fix paywall Voce AI.
+- **v1.2 in review** (2026-05-12, build 3):
+  - RC login con Firebase UID (`usePurchases(userId)`) — acquisti ora persistenti su cambio device
+  - Force update via Firebase `config/minVersion` — modal bloccante se versione obsoleta
+  - Fix `target="_blank"` link App Store nel modal force-update
 
 ### 🔴 Bloccanti (risolti)
-- ~~Sign in with Apple~~ — non implementato per v1.0, rimandato a v1.1
+- ~~Sign in with Apple~~ — non implementato per v1.0, rimandato a v1.2+
 - ~~RevenueCat / IAP reali~~ → completato
 - ~~APP_STORE_URL~~ → aggiornato
+- ~~RC utenti anonimi~~ → risolto in v1.2 con logIn Firebase UID
 
-### 🟡 Da fare dopo approvazione Apple v1.1
-1. **Rilascio manuale**: quando Apple approva v1.1, premere "Rilascia" manualmente su App Store Connect.
-2. **Afghanistan e Marocco**: verificare se rimuovere la restrizione geografica automatica (classificazione 13+).
-3. **Sign in with Apple**: per v1.2 — Xcode entitlement + Firebase provider Apple.
-4. **Voce AI feedback post-acquisto**: aggiungere indicazione "dove trovare" la feature dopo l'acquisto del pack narratore (UX miglioramento).
+### 🟡 Da fare (v1.3+)
+1. **Afghanistan e Marocco**: verificare restrizione geografica su App Store Connect.
+2. **Sign in with Apple**: Xcode entitlement + Firebase provider Apple.
+3. **Voce AI feedback post-acquisto**: UX — indicare dove trovare la feature dopo acquisto pack narratore.
+4. **Force update attivazione**: quando serve, impostare `config/minVersion` su Firebase Console.
 
 ### 🟢 Opzionale (post-lancio)
 5. **Universal Links**: `apple-app-site-association` su Vercel.

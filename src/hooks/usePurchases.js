@@ -54,9 +54,9 @@ function entitlementsToPackIds(customerInfo) {
 }
 
 // ─── Hook principale ──────────────────────────────────────────────────────────
-export function usePurchases() {
+export function usePurchases(userId = null) {
   const isNative = Capacitor.isNativePlatform();
-  const PurchasesRef = useRef(null); // lazy import del modulo RevenueCat
+  const PurchasesRef = useRef(null);
 
   const [purchasedPacks, setPurchasedPacks] = useState(lsGet);
   const [isLoading, setIsLoading] = useState(false);
@@ -65,7 +65,7 @@ export function usePurchases() {
 
   // ── Init RevenueCat (solo native) ──────────────────────────────────────────
   useEffect(() => {
-    if (!isNative) return; // web: localStorage è già inizializzato
+    if (!isNative) return;
 
     let cancelled = false;
     (async () => {
@@ -79,18 +79,31 @@ export function usePurchases() {
         if (!cancelled) {
           const packs = entitlementsToPackIds(customerInfo);
           setPurchasedPacks(packs);
-          lsSet(packs); // sync localStorage come cache locale
+          lsSet(packs);
           setInitialized(true);
         }
       } catch (e) {
         console.warn('[usePurchases] RC init error, fallback localStorage:', e);
-        // Fallback silenzioso: usa localStorage
         if (!cancelled) setInitialized(true);
       }
     })();
 
     return () => { cancelled = true; };
   }, [isNative]);
+
+  // ── Identifica utente su RC quando Firebase UID disponibile ───────────────
+  useEffect(() => {
+    if (!isNative || !initialized || !userId) return;
+    const RC = PurchasesRef.current;
+    if (!RC) return;
+    RC.logIn({ appUserID: userId })
+      .then(({ customerInfo }) => {
+        const packs = entitlementsToPackIds(customerInfo);
+        setPurchasedPacks(packs);
+        lsSet(packs);
+      })
+      .catch(e => console.warn('[usePurchases] RC logIn error:', e));
+  }, [userId, initialized, isNative]);
 
   // ── Acquisto singolo pack ──────────────────────────────────────────────────
   const purchasePackage = useCallback(async (packId) => {
